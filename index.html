@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sube tus Fotos</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+    <main class="container">
+        <div class="glass-panel">
+            <h1 class="title">Galería de Impacto</h1>
+            <p class="subtitle">Reporta incidentes de Seguridad, Salud o Género</p>
+
+            <div class="upload-container">
+                <!-- Botón de Foto -->
+                <input type="file" id="photo-upload" accept="image/*" class="upload-input">
+                <label for="photo-upload" class="upload-btn">Elegir Foto</label>
+
+                <!-- Cuadro de Comentario -->
+                <textarea id="user-comment" placeholder="Describe lo que sucede en la foto..."
+                    style="width: 100%; margin-top: 15px; padding: 10px; border-radius: 8px; border: none;"></textarea>
+
+                <!-- Selectores de Categoría -->
+                <div class="category-selector" style="margin-top: 15px; color: white;">
+                    <p>Categoría:</p>
+                    <button type="button" class="cat-btn" data-category="Seguridad">Seguridad</button>
+                    <button type="button" class="cat-btn" data-category="Salud">Salud</button>
+                    <button type="button" class="cat-btn" data-category="Equidad de Género">Equidad de Género</button>
+                </div>
+
+                <!-- Botón Final -->
+                <button id="send-btn"
+                    style="margin-top: 20px; background: #6366f1; color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: bold;">Publicar
+                    Reporte</button>
+            </div>
+
+            <div id="preview-container" class="preview-grid"></div>
+        </div>
+    </main>
+
+    <!-- IMPORTANTE: Aquí van los scripts de Firebase antes de tu script.js -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+
+    <script src="script.js"></script>
+</body>
+
+</html>

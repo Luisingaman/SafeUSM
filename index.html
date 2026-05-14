@@ -5,40 +5,74 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sube tus Fotos</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="styles.css">
 </head>
 
 <body>
+    <!-- Elementos de fondo decorativos -->
+    <div class="bg-shape shape-1"></div>
+    <div class="bg-shape shape-2"></div>
+
     <main class="container">
-        <div class="glass-panel">
-            <h1 class="title">Galería de Impacto</h1>
+        <div class="glass-panel main-panel">
+            <h1 class="title">SafeUSM</h1>
             <p class="subtitle">Reporta incidentes de Seguridad, Salud o Género</p>
 
             <div class="upload-container">
                 <!-- Botón de Foto -->
-                <input type="file" id="photo-upload" accept="image/*" class="upload-input">
-                <label for="photo-upload" class="upload-btn">Elegir Foto</label>
+                <div class="photo-upload-wrapper">
+                    <input type="file" id="photo-upload" accept="image/*" class="upload-input">
+                    <label for="photo-upload" class="upload-btn">
+                        <svg class="upload-icon" width="24" height="24" viewBox="0 0 24 24" fill="none"
+                            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                            <polyline points="17 8 12 3 7 8"></polyline>
+                            <line x1="12" y1="3" x2="12" y2="15"></line>
+                        </svg>
+                        <span>Elegir Foto</span>
+                    </label>
+                </div>
 
                 <!-- Cuadro de Comentario -->
-                <textarea id="user-comment" placeholder="Describe lo que sucede en la foto..."
-                    style="width: 100%; margin-top: 15px; padding: 10px; border-radius: 8px; border: none;"></textarea>
+                <div class="input-group">
+                    <textarea id="user-comment" class="input-field"
+                        placeholder="Describe lo que sucede en la foto..."></textarea>
+                </div>
 
                 <!-- Selectores de Categoría -->
-                <div class="category-selector" style="margin-top: 15px; color: white;">
-                    <p>Categoría:</p>
-                    <button type="button" class="cat-btn" data-category="Seguridad">Seguridad</button>
-                    <button type="button" class="cat-btn" data-category="Salud">Salud</button>
-                    <button type="button" class="cat-btn" data-category="Equidad de Género">Equidad de Género</button>
+                <div class="category-selector">
+                    <p class="section-label">Selecciona una Categoría:</p>
+                    <div class="category-buttons">
+                        <button type="button" class="cat-btn" data-category="Seguridad">
+                            <span class="cat-dot" style="background-color: var(--danger);"></span> Seguridad
+                        </button>
+                        <button type="button" class="cat-btn" data-category="Salud">
+                            <span class="cat-dot" style="background-color: var(--success);"></span> Salud
+                        </button>
+                        <button type="button" class="cat-btn" data-category="Equidad de Género">
+                            <span class="cat-dot" style="background-color: var(--purple);"></span> Equidad de Género
+                        </button>
+                    </div>
                 </div>
 
                 <!-- Botón Final -->
-                <button id="send-btn"
-                    style="margin-top: 20px; background: #6366f1; color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: bold;">Publicar
-                    Reporte</button>
+                <button id="send-btn" class="send-btn">
+                    <span>Publicar Reporte</span>
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                        stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="22" y1="2" x2="11" y2="13"></line>
+                        <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                    </svg>
+                </button>
             </div>
 
-            <div id="preview-container" class="preview-grid"></div>
+            <div class="reports-header">
+                <h2>Reportes Recientes</h2>
+            </div>
+            <div id="preview-container" class="preview-grid">
+                <!-- Aquí se inyectan los reportes -->
+            </div>
         </div>
     </main>
 

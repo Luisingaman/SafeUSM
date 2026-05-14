@@ -1,5 +1,3 @@
-// 1. CONFIGURACIÓN DE FIREBASE
-// REEMPLAZA ESTOS DATOS CON LOS DE TU PROPIA CONSOLA DE FIREBASE
 const firebaseConfig = {
     apiKey: "AIzaSyDzA82S6v-6x_gXue8Q1LgOZLB7lJrLhYY",
     authDomain: "safeusm.firebaseapp.com",
@@ -10,36 +8,28 @@ const firebaseConfig = {
     measurementId: "G-5S3J58FPB6"
 };
 
-// Inicializamos Firebase
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
 
-// 2. VARIABLES PARA CAPTURAR LOS ELEMENTOS DEL HTML
 let categoriaSeleccionada = "";
 const btnEnviar = document.getElementById('send-btn');
 const inputComentario = document.getElementById('user-comment');
 const botonesCategoria = document.querySelectorAll('.cat-btn');
 
-// 3. LÓGICA PARA ELEGIR LA CATEGORÍA
-// Esto hace que cuando hagas clic en un botón, guardemos qué categoría elegiste
 botonesCategoria.forEach(boton => {
     boton.addEventListener('click', (e) => {
         categoriaSeleccionada = e.target.getAttribute('data-category');
 
-        // Un pequeño truco para que sepas qué elegiste:
         alert("Has seleccionado la categoría: " + categoriaSeleccionada);
 
-        // Estética: Quitamos el color de los otros botones y se lo ponemos al seleccionado
         botonesCategoria.forEach(b => b.style.border = "none");
         e.target.style.border = "2px solid white";
     });
 });
 
-// 4. LÓGICA PARA ENVIAR LOS DATOS A FIREBASE
 btnEnviar.addEventListener('click', () => {
     const comentario = inputComentario.value;
 
-    // Validación básica
     if (comentario.trim() === "" || categoriaSeleccionada === "") {
         alert("Por favor, escribe un comentario y selecciona una categoría (Seguridad, Salud o Género).");
         return;

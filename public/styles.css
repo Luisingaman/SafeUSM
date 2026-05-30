@@ -122,10 +122,15 @@ body {
     gap: 1.5rem;
 }
 
-.photo-upload-wrapper {
+.photo-buttons-row {
     display: flex;
-    justify-content: center;
+    gap: 0.75rem;
+    width: 100%;
     margin-bottom: 0.5rem;
+}
+
+.photo-upload-wrapper {
+    flex: 1;
 }
 
 .upload-input {
@@ -137,32 +142,80 @@ body {
     align-items: center;
     justify-content: center;
     gap: 0.75rem;
-    background: rgba(255, 255, 255, 0.05);
     color: var(--text-primary);
-    padding: 1rem 2rem;
+    padding: 1rem 1.25rem;
     border-radius: 16px;
-    font-size: 1.125rem;
+    font-size: 1rem;
     font-weight: 500;
     cursor: pointer;
-    border: 1px dashed rgba(255, 255, 255, 0.3);
     transition: all 0.3s ease;
     width: 100%;
 }
 
-.upload-btn:hover {
-    background: rgba(255, 255, 255, 0.1);
+/* Botón Cámara — acento verde/teal */
+.camera-btn {
+    background: rgba(16, 185, 129, 0.08);
+    border: 1px dashed rgba(16, 185, 129, 0.4);
+}
+
+.camera-btn:hover {
+    background: rgba(16, 185, 129, 0.15);
+    border-color: var(--success);
+    color: #fff;
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px -4px rgba(16, 185, 129, 0.25);
+}
+
+.camera-btn .upload-icon {
+    color: var(--success);
+}
+
+/* Botón Galería — acento azul */
+.gallery-btn {
+    background: rgba(59, 130, 246, 0.08);
+    border: 1px dashed rgba(59, 130, 246, 0.4);
+}
+
+.gallery-btn:hover {
+    background: rgba(59, 130, 246, 0.15);
     border-color: var(--accent-color);
     color: #fff;
     transform: translateY(-2px);
+    box-shadow: 0 8px 20px -4px rgba(59, 130, 246, 0.25);
+}
+
+.gallery-btn .upload-icon {
+    color: var(--accent-color);
 }
 
 .upload-icon {
     transition: transform 0.3s ease;
-    color: var(--accent-color);
 }
 
 .upload-btn:hover .upload-icon {
     transform: translateY(-2px);
+}
+
+/* Indicador de foto seleccionada en el botón */
+.upload-btn.has-photo {
+    border-style: solid;
+    border-width: 2px;
+}
+
+.camera-btn.has-photo {
+    background: rgba(16, 185, 129, 0.15);
+    border-color: var(--success);
+}
+
+.gallery-btn.has-photo {
+    background: rgba(59, 130, 246, 0.15);
+    border-color: var(--accent-color);
+}
+
+@media (max-width: 480px) {
+    .photo-buttons-row {
+        flex-direction: column;
+    }
 }
 
 .input-group {

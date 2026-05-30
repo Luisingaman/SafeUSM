@@ -247,7 +247,7 @@ btnEnviar.addEventListener('click', async () => {
         // Limpiar vista previa de imagen
         previewContainer.style.display = 'none';
         previewImage.src = '';
-        uploadBtnText.textContent = 'Elegir Foto';
+        if (uploadBtnText) uploadBtnText.textContent = 'Elegir Foto';
 
     } catch (error) {
         console.error("Hubo un error:", error);
@@ -666,6 +666,16 @@ db.collection("reportes").orderBy("fecha", "desc").onSnapshot((snapshot) => {
                 timerProgressBar: true,
                 background: 'rgba(15, 23, 42, 0.95)'
             });
+            
+            if (window.Notification && Notification.permission === "granted") {
+                new Notification(`Nuevo Aviso: ${data.categoria}`, { body: data.texto });
+            } else if (window.Notification && Notification.permission !== "denied") {
+                Notification.requestPermission().then(permission => {
+                    if (permission === "granted") {
+                        new Notification(`Nuevo Aviso: ${data.categoria}`, { body: data.texto });
+                    }
+                });
+            }
         }
     });
 
@@ -715,7 +725,7 @@ fileInput.addEventListener('change', () => {
         reader.onload = (e) => {
             previewImage.src = e.target.result;
             previewContainer.style.display = 'flex';
-            uploadBtnText.textContent = 'Cambiar Foto';
+            if (uploadBtnText) uploadBtnText.textContent = 'Cambiar Foto';
             
             // Reajustar tamaño de los mapas por si el layout se desplaza
             setTimeout(() => {
@@ -731,7 +741,7 @@ btnRemovePhoto.addEventListener('click', () => {
     fileInput.value = '';
     previewImage.src = '';
     previewContainer.style.display = 'none';
-    uploadBtnText.textContent = 'Elegir Foto';
+    if (uploadBtnText) uploadBtnText.textContent = 'Elegir Foto';
     
     // Reajustar tamaño de los mapas por si el layout se desplaza
     setTimeout(() => {

@@ -655,6 +655,15 @@ db.collection("reportes").orderBy("fecha", "desc").onSnapshot((snapshot) => {
     snapshot.docChanges().forEach((change) => {
         if (change.type === "added" && !isFirstLoad) {
             const data = change.doc.data();
+            
+            // Verificación para Android Native Bridge o Web Notifications
+            const hasAndroidBridge = typeof window.AndroidBridge !== "undefined";
+            if (hasAndroidBridge || Notification.permission === "granted") {
+                new Notification(`Nuevo Aviso: ${data.categoria}`, {
+                    body: data.texto
+                });
+            }
+
             Swal.fire({
                 title: `Nuevo Aviso: ${data.categoria}`,
                 text: data.texto,

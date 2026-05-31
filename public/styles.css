@@ -588,6 +588,11 @@ html[data-theme="light"] {
 html[data-theme="light"] body {
     background-color: #f8fafc;
 }
+html[data-theme="light"] .title {
+    background: linear-gradient(to right, #0f172a, #2563eb);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
 
 /* Alto Contraste / Baja Visión */
 html[data-theme="low-vision"] {

@@ -170,6 +170,8 @@ const btnEnviar = document.getElementById('send-btn');
 const inputComentario = document.getElementById('user-comment');
 const botonesCategoria = document.querySelectorAll('.cat-btn');
 
+
+
 botonesCategoria.forEach(boton => {
     boton.addEventListener('click', (e) => {
         categoriaSeleccionada = e.target.getAttribute('data-category');
@@ -761,3 +763,60 @@ btnRemovePhoto.addEventListener('click', () => {
         globalMap.invalidateSize();
     }, 300);
 });
+
+// --- LÓGICA DE ACCESIBILIDAD ---
+const btnSettings = document.getElementById('btn-settings');
+const accessibilityModal = document.getElementById('accessibility-modal');
+const btnCloseAccessibility = document.getElementById('btn-close-accessibility');
+const accessBtns = document.querySelectorAll('.access-btn');
+
+// Cargar preferencia guardada al inicio
+const savedTheme = localStorage.getItem('safeusm-theme') || 'default';
+if (savedTheme !== 'default') {
+    document.documentElement.setAttribute('data-theme', savedTheme);
+}
+updateActiveAccessBtn(savedTheme);
+
+if (btnSettings && accessibilityModal) {
+    btnSettings.addEventListener('click', () => {
+        accessibilityModal.style.display = 'flex';
+    });
+
+    btnCloseAccessibility.addEventListener('click', () => {
+        accessibilityModal.style.display = 'none';
+    });
+
+    accessBtns.forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            const theme = e.target.getAttribute('data-theme');
+            
+            if (theme === 'default') {
+                document.documentElement.removeAttribute('data-theme');
+            } else {
+                document.documentElement.setAttribute('data-theme', theme);
+            }
+            
+            localStorage.setItem('safeusm-theme', theme);
+            updateActiveAccessBtn(theme);
+        });
+    });
+} else if (btnSettings) {
+    btnSettings.addEventListener('click', () => {
+        Swal.fire({
+            title: 'Actualización Requerida',
+            text: 'Parece que tu navegador guardó una versión antigua. Por favor recarga presionando Ctrl + Shift + R.',
+            icon: 'info',
+            background: 'rgba(15, 23, 42, 0.95)'
+        });
+    });
+}
+
+function updateActiveAccessBtn(theme) {
+    accessBtns.forEach(btn => {
+        if (btn.getAttribute('data-theme') === theme) {
+            btn.classList.add('active');
+        } else {
+            btn.classList.remove('active');
+        }
+    });
+}

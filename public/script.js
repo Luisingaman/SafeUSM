@@ -385,9 +385,7 @@ function renderFilteredReports() {
 
         // Creamos el diseño de cada tarjeta
         const tarjeta = document.createElement('div');
-        tarjeta.className = 'glass-panel'; // Usamos tu clase de estilo
-        tarjeta.style.margin = "10px";
-        tarjeta.style.padding = "15px";
+        tarjeta.className = 'report-card'; // Usamos tu clase de estilo para los reportes
         tarjeta.style.borderLeft = "5px solid " + getColor(reporte.categoria);
         tarjeta.style.position = "relative";
 

@@ -23,6 +23,25 @@
             <h1 class="title">SafeUSM</h1>
             <p class="subtitle">Reporta incidentes de Seguridad, Salud o Género</p>
 
+            <div class="user-actions">
+            <!-- Botón de Configuración / Accesibilidad -->
+            <button id="btn-settings" class="icon-btn" title="Configuración de Accesibilidad">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+            </button>
+            
+            <!-- Botones de sesión (Desactivados temporalmente) -->
+            <!-- <span id="user-email" class="user-email" style="display: none;"></span>
+            <button id="btn-logout" class="logout-btn" style="display: none;">Cerrar Sesión</button> -->
+            <button id="btn-login" class="icon-btn" title="Iniciar Sesión">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" />
+                </svg>
+            </button>
+        </div>
+
             <!-- Sección de Login (Desactivada temporalmente para pruebas) -->
             <div id="login-section" class="login-section" style="display: none;">
                 <p>Inicia sesión con tu correo @usm.cl para poder enviar reportes.</p>
@@ -199,7 +218,28 @@
         </div>
     </div>
 
-    <script src="script.js?v=4"></script>
+    <!-- Accessibility Modal -->
+    <div id="accessibility-modal" class="webcam-modal" style="display: none;">
+        <div class="webcam-content glass-panel" style="max-width: 400px; padding: 2rem;">
+            <h3 style="color: var(--text-primary); margin-bottom: 0.5rem; text-align: center; font-weight: 600; font-size: 1.25rem;">Accesibilidad</h3>
+            <p style="color: var(--text-secondary); text-align: center; margin-bottom: 1.5rem; font-size: 0.9rem; line-height: 1.4;">Selecciona un modo visual para adaptar la interfaz a tus necesidades.</p>
+            
+            <div class="accessibility-options" style="display: flex; flex-direction: column; gap: 0.75rem; width: 100%;">
+                <button class="access-btn active" data-theme="default">Oscuro (Por defecto)</button>
+                <button class="access-btn" data-theme="light">Claro</button>
+                <button class="access-btn" data-theme="low-vision">Alto Contraste / Baja Visión</button>
+                <button class="access-btn" data-theme="achromatopsia">Monocromático</button>
+                <button class="access-btn" data-theme="daltonism">Daltonismo (Wong)</button>
+                <button class="access-btn" data-theme="photophobia">Fotofobia (Luz Cálida)</button>
+            </div>
+
+            <div style="margin-top: 1.5rem; width: 100%;">
+                <button id="btn-close-accessibility" class="logout-btn" style="width: 100%; padding: 0.75rem; font-weight: 500; font-size: 1rem;">Cerrar Configuración</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js?v=5"></script>
 </body>
 
 </html>

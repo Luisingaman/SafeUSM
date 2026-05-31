@@ -555,6 +555,90 @@ button.swal2-confirm { border-radius: 12px !important; }
     transform: scaleX(-1); /* Efecto espejo */
 }
 
+/* === ACCESIBILIDAD MODAL === */
+.access-btn {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid var(--panel-border);
+    color: var(--text-primary);
+    padding: 0.75rem 1rem;
+    border-radius: 8px;
+    cursor: pointer;
+    text-align: left;
+    transition: all 0.2s ease;
+    font-size: 0.95rem;
+}
+.access-btn:hover {
+    background: rgba(255, 255, 255, 0.1);
+}
+.access-btn.active {
+    background: rgba(59, 130, 246, 0.2);
+    border-color: var(--accent-color);
+    font-weight: 500;
+}
+
+/* THEMES */
+/* Claro */
+html[data-theme="light"] {
+    --bg-color: #f8fafc;
+    --panel-bg: rgba(255, 255, 255, 0.95);
+    --panel-border: rgba(0, 0, 0, 0.1);
+    --text-primary: #0f172a;
+    --text-secondary: #475569;
+}
+html[data-theme="light"] body {
+    background-color: #f8fafc;
+}
+
+/* Alto Contraste / Baja Visión */
+html[data-theme="low-vision"] {
+    --bg-color: #000000;
+    --panel-bg: #000000;
+    --panel-border: #ffffff;
+    --text-primary: #ffffff;
+    --text-secondary: #dddddd;
+    --accent-color: #ffff00;
+    --danger: #ff0000;
+    --warning: #ffaa00;
+    --success: #00ff00;
+}
+html[data-theme="low-vision"] body {
+    background-color: #000000;
+    font-size: 105%;
+}
+html[data-theme="low-vision"] .glass-panel {
+    border: 2px solid #ffffff;
+}
+
+/* Monocromático (Acromatopsia) */
+html[data-theme="achromatopsia"] {
+    filter: grayscale(100%);
+}
+
+/* Daltonismo (Paleta de Wong) */
+html[data-theme="daltonism"] {
+    --danger: #d55e00;     /* Bermellón */
+    --warning: #f0e442;    /* Amarillo */
+    --success: #009e73;    /* Verde azulado */
+    --accent-color: #0072b2; /* Azul oscuro */
+}
+
+/* Fotofobia (Luz Cálida/Oscura) */
+html[data-theme="photophobia"] {
+    --bg-color: #050505;
+    --panel-bg: #0a0a0a;
+    --panel-border: #1a1a1a;
+    --text-primary: #a39171;
+    --text-secondary: #7a6a50;
+    --accent-color: #5c4424;
+    --danger: #7a2020;
+    --warning: #7a5c10;
+    --success: #1d5231;
+    filter: sepia(0.3) brightness(0.85);
+}
+html[data-theme="photophobia"] body {
+    background-color: #050505;
+}
+
 /* Responsive */
 @media (max-width: 640px) {
     .glass-panel {

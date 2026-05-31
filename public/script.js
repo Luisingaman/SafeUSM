@@ -719,6 +719,20 @@ fileInput.addEventListener('change', () => {
             return;
         }
 
+        // Validación de tamaño (20 MB máximo)
+        const maxSizeInBytes = 20 * 1024 * 1024; // 20 MB
+        if (file.size > maxSizeInBytes) {
+            Swal.fire({
+                title: 'Archivo demasiado grande',
+                text: `Tu archivo pesa ${(file.size / (1024 * 1024)).toFixed(1)} MB. El límite máximo permitido es de 20 MB.`,
+                icon: 'warning',
+                confirmButtonColor: '#3b82f6',
+                background: 'rgba(15, 23, 42, 0.9)'
+            });
+            fileInput.value = ''; // Limpiamos el input
+            return;
+        }
+
         const reader = new FileReader();
         reader.onload = (e) => {
             previewImage.src = e.target.result;

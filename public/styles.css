@@ -511,6 +511,50 @@ h2.swal2-title { color: var(--text-primary) !important; }
 div.swal2-html-container { color: var(--text-secondary) !important; }
 button.swal2-confirm { border-radius: 12px !important; }
 
+/* === ESTILOS PARA WEBCAM MODAL (PC) === */
+.webcam-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.85);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    z-index: 10000;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 1rem;
+}
+
+.webcam-content {
+    width: 100%;
+    max-width: 500px;
+    padding: 2rem !important;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.webcam-video-container {
+    width: 100%;
+    aspect-ratio: 4/3;
+    background: #000;
+    border-radius: 12px;
+    overflow: hidden;
+    position: relative;
+    box-shadow: 0 10px 25px -5px rgba(0,0,0,0.5);
+    border: 1px solid rgba(255,255,255,0.1);
+}
+
+#webcam-video {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transform: scaleX(-1); /* Efecto espejo */
+}
+
 /* Responsive */
 @media (max-width: 640px) {
     .glass-panel {

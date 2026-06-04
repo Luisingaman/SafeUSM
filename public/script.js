@@ -43,6 +43,7 @@ const storage = firebase.storage();
 
 let categoriaSeleccionada = "";
 let currentUserEmail = null;
+let currentStaffCategory = null;
 
 // --- LÓGICA DE AUTENTICACIÓN ---
 const btnLogin = document.getElementById('btn-login');
@@ -268,6 +269,27 @@ function navigateTo(pageId) {
         myReportsUnsubscribe = null;
     }
 
+    if (pageId === 'page-home' && currentStaffCategory) {
+        currentStaffCategory = null;
+        activeCategoryFilter = "all";
+        document.querySelectorAll('.filter-btn[data-filter-type="category"]').forEach(b => {
+            b.style.display = 'inline-block';
+            if(b.getAttribute('data-filter-val') === "all") {
+                b.classList.add('active');
+            } else {
+                b.classList.remove('active');
+            }
+        });
+        Swal.fire({
+            title: 'Sesión Finalizada',
+            text: 'Has salido del modo encargado.',
+            icon: 'info',
+            timer: 1500,
+            showConfirmButton: false,
+            background: 'rgba(15, 23, 42, 0.9)'
+        });
+    }
+
     // Ocultar todas las páginas
     [pageHome, pageReportForm, pageReportsList, pageLoginCustom, pageCredentialsList, pageProfile, pageEditProfile].forEach(page => {
         if (page) {
@@ -338,6 +360,65 @@ if (btnHomeLogin) {
         } else {
             navigateTo('page-login-custom');
         }
+    });
+}
+const btnStaffLogin = document.getElementById('btn-staff-login');
+if (btnStaffLogin) {
+    btnStaffLogin.addEventListener('click', () => {
+        Swal.fire({
+            title: 'Acceso Personal',
+            text: 'Ingrese su contraseña de acceso:',
+            input: 'password',
+            inputAttributes: {
+                autocapitalize: 'off',
+                autocorrect: 'off'
+            },
+            showCancelButton: true,
+            confirmButtonText: 'Entrar',
+            cancelButtonText: 'Cancelar',
+            confirmButtonColor: '#3b82f6',
+            background: 'rgba(15, 23, 42, 0.9)'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                let section = null;
+                if (result.value === '6767') section = 'Seguridad';
+                else if (result.value === '6969') section = 'Salud';
+                else if (result.value === '1313') section = 'Equidad de Género';
+                
+                if (section) {
+                    currentStaffCategory = section;
+                    Swal.fire({
+                        title: 'Acceso Concedido',
+                        text: 'Has ingresado como Encargado de ' + section,
+                        icon: 'success',
+                        confirmButtonColor: '#3b82f6',
+                        background: 'rgba(15, 23, 42, 0.9)'
+                    }).then(() => {
+                        navigateTo('page-reports-list');
+                        
+                        document.querySelectorAll('.filter-btn[data-filter-type="category"]').forEach(b => {
+                            if(b.getAttribute('data-filter-val') === section) {
+                                b.classList.add('active');
+                                b.style.display = 'inline-block';
+                            } else {
+                                b.classList.remove('active');
+                                b.style.display = 'none';
+                            }
+                        });
+                        activeCategoryFilter = section;
+                        renderFilteredReports();
+                    });
+                } else {
+                    Swal.fire({
+                        title: 'Acceso Denegado',
+                        text: 'Contraseña incorrecta.',
+                        icon: 'error',
+                        confirmButtonColor: '#3b82f6',
+                        background: 'rgba(15, 23, 42, 0.9)'
+                    });
+                }
+            }
+        });
     });
 }
 if (btnGotoCredentials) {
@@ -555,6 +636,10 @@ function renderFilteredReports() {
     // 1. Filtrar los reportes en base a la selección activa
     let filtered = [...currentReports];
 
+    if (currentStaffCategory) {
+        activeCategoryFilter = currentStaffCategory;
+    }
+
     // Filtrar por categoría
     if (activeCategoryFilter !== "all") {
         filtered = filtered.filter(r => r.categoria === activeCategoryFilter);
@@ -675,6 +760,15 @@ function renderFilteredReports() {
                     </svg>
                     <span id="comment-count-${reporteId}">0</span>
                 </button>
+                ${currentStaffCategory ? `
+                <button class="report-action-btn delete-report-btn" title="Borrar Reporte" style="color: var(--danger); border-color: rgba(239, 68, 68, 0.3);">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polyline points="3 6 5 6 21 6"></polyline>
+                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                    </svg>
+                    <span>Borrar</span>
+                </button>
+                ` : ''}
             </div>
             
             <!-- Sección Colapsable de Comentarios -->
@@ -694,7 +788,7 @@ function renderFilteredReports() {
                     </div>
                     
                     <!-- Controles de Respuesta Oficial -->
-                    <div class="official-comment-controls">
+                    <div class="official-comment-controls" ${currentStaffCategory ? 'style="display: none;"' : ''}>
                         <label class="official-toggle-label">
                             <input type="checkbox" class="official-check" style="cursor: pointer;">
                             👮 Responder como Personal del Campus (Simulación)
@@ -755,6 +849,35 @@ function renderFilteredReports() {
             }
         });
 
+        // X. Borrar Reporte (Solo Encargados)
+        if (currentStaffCategory) {
+            const deleteReportBtn = tarjeta.querySelector('.delete-report-btn');
+            if (deleteReportBtn) {
+                deleteReportBtn.addEventListener('click', () => {
+                    Swal.fire({
+                        title: '¿Borrar Publicación?',
+                        text: "Esta acción no se puede deshacer.",
+                        icon: 'warning',
+                        showCancelButton: true,
+                        confirmButtonColor: '#ef4444',
+                        cancelButtonColor: '#64748b',
+                        confirmButtonText: 'Sí, borrar',
+                        cancelButtonText: 'Cancelar',
+                        background: 'rgba(15, 23, 42, 0.9)'
+                    }).then((result) => {
+                        if (result.isConfirmed) {
+                            db.collection("reportes").doc(reporteId).delete().then(() => {
+                                Swal.fire('Borrado', 'La publicación ha sido eliminada.', 'success');
+                                renderFilteredReports();
+                            }).catch(error => {
+                                Swal.fire('Error', 'No se pudo borrar: ' + error.message, 'error');
+                            });
+                        }
+                    });
+                });
+            }
+        }
+
         // 4. Mostrar/Ocultar campos de comentario oficial
         const officialCheck = tarjeta.querySelector('.official-check');
         const officialFields = tarjeta.querySelector('.official-fields');
@@ -769,10 +892,13 @@ function renderFilteredReports() {
             const input = commentForm.querySelector('.comment-input');
             const text = input.value.trim();
             
-            const isOfficial = officialCheck.checked;
+            let isOfficial = officialCheck.checked;
             let role = "Normal";
             
-            if (isOfficial) {
+            if (currentStaffCategory) {
+                isOfficial = true;
+                role = "Encargado de " + currentStaffCategory;
+            } else if (isOfficial) {
                 const selectRole = commentForm.querySelector('.official-select').value;
                 const pin = commentForm.querySelector('.official-pin').value;
                 
@@ -855,14 +981,49 @@ function renderFilteredReports() {
                             </div>
                             <p class="comment-text" style="${commentData.esOficial ? 'font-weight: 600; color: #fef08a;' : ''}">${commentData.texto}</p>
                         </div>
-                        <button class="comment-like-btn ${commentIsLiked ? 'active' : ''}" title="Me gusta">
-                            <svg width="12" height="12" viewBox="0 0 24 24" fill="${commentIsLiked ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="2">
-                                <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
-                            </svg>
-                            <span>${commentData.likes || 0}</span>
-                        </button>
+                        <div style="display: flex; gap: 0.5rem; align-items: center;">
+                            <button class="comment-like-btn ${commentIsLiked ? 'active' : ''}" title="Me gusta">
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="${commentIsLiked ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="2">
+                                    <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
+                                </svg>
+                                <span>${commentData.likes || 0}</span>
+                            </button>
+                            ${currentStaffCategory ? `
+                            <button class="comment-delete-btn" title="Borrar comentario" style="background: transparent; border: 1px solid var(--danger); border-radius: 20px; padding: 4px 8px; color: var(--danger); cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 0.75rem;">
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <polyline points="3 6 5 6 21 6"></polyline>
+                                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"></path>
+                                </svg>
+                            </button>
+                            ` : ''}
+                        </div>
                     `;
                     
+                    // Click para borrar el Comentario (Solo Encargados)
+                    if (currentStaffCategory) {
+                        const commentDeleteBtn = commentDiv.querySelector('.comment-delete-btn');
+                        if (commentDeleteBtn) {
+                            commentDeleteBtn.addEventListener('click', () => {
+                                Swal.fire({
+                                    title: '¿Borrar Comentario?',
+                                    icon: 'warning',
+                                    showCancelButton: true,
+                                    confirmButtonColor: '#ef4444',
+                                    cancelButtonColor: '#64748b',
+                                    confirmButtonText: 'Sí, borrar',
+                                    cancelButtonText: 'Cancelar',
+                                    background: 'rgba(15, 23, 42, 0.9)'
+                                }).then((result) => {
+                                    if (result.isConfirmed) {
+                                        db.collection("reportes").doc(reporteId).collection("comentarios").doc(commentId).delete().catch(error => {
+                                            Swal.fire('Error', 'No se pudo borrar el comentario: ' + error.message, 'error');
+                                        });
+                                    }
+                                });
+                            });
+                        }
+                    }
+
                     // Click para Like en el Comentario
                     const commentLikeBtn = commentDiv.querySelector('.comment-like-btn');
                     commentLikeBtn.addEventListener('click', () => {

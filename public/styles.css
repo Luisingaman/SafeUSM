@@ -1675,3 +1675,46 @@ html[data-theme="low-vision"] .input-field-custom:focus {
     border-color: #ffff00;
     box-shadow: 0 0 0 4px rgba(255, 255, 0, 0.3);
 }
+
+/* Webcam Modal Styles */
+.webcam-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(0, 0, 0, 0.8);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+    backdrop-filter: blur(5px);
+}
+
+.webcam-content {
+    background: var(--glass-bg);
+    padding: 2rem;
+    border-radius: 24px;
+    border: 1px solid var(--panel-border);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    box-shadow: 0 20px 40px rgba(0,0,0,0.5);
+    max-width: 90vw;
+}
+
+.webcam-video-container {
+    width: 100%;
+    max-width: 640px;
+    border-radius: 12px;
+    overflow: hidden;
+    background: #000;
+    margin-bottom: 1rem;
+    border: 1px solid rgba(255,255,255,0.1);
+}
+
+#webcam-video {
+    width: 100%;
+    height: auto;
+    display: block;
+}

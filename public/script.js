@@ -55,10 +55,12 @@ const userEmailText = document.getElementById('user-email');
 
 // --- ELEMENTOS DE VISTA PREVIA DE IMAGEN ---
 const fileInput = document.getElementById('photo-upload');
+const cameraInput = document.getElementById('camera-upload');
 const uploadBtnText = document.getElementById('upload-btn-text');
 const previewContainer = document.getElementById('image-preview-container');
 const previewImage = document.getElementById('image-preview');
 const btnRemovePhoto = document.getElementById('btn-remove-photo');
+let currentSelectedFile = null;
 
 btnLogin.addEventListener('click', () => {
     auth.signInWithPopup(provider).catch(error => {
@@ -500,7 +502,7 @@ btnEnviar.addEventListener('click', async () => {
     }
 
     const comentario = inputComentario.value;
-    const file = fileInput.files[0];
+    const file = currentSelectedFile;
 
     if (comentario.trim() === "" || categoriaSeleccionada === "") {
         Swal.fire('Faltan Datos', 'Por favor, escribe un comentario y selecciona una categoría (Seguridad, Salud o Género).', 'warning');
@@ -560,6 +562,8 @@ btnEnviar.addEventListener('click', async () => {
         inputComentario.value = "";
         categoriaSeleccionada = "";
         fileInput.value = "";
+        if (cameraInput) cameraInput.value = "";
+        currentSelectedFile = null;
         botonesCategoria.forEach(b => {
             b.classList.remove('active');
             b.style.border = "none";
@@ -1114,64 +1118,118 @@ function getColor(categoria) {
 }
 
 // --- MANEJO DE VISTA PREVIA DE LA IMAGEN ---
-fileInput.addEventListener('change', () => {
-    const file = fileInput.files[0];
-    if (file) {
-        // Validar que el archivo sea una imagen
-        if (!file.type.startsWith('image/')) {
-            Swal.fire({
-                title: 'Archivo no válido',
-                text: 'Por favor selecciona un archivo de tipo imagen.',
-                icon: 'warning',
-                confirmButtonColor: '#3b82f6',
-                background: 'rgba(15, 23, 42, 0.9)'
-            });
-            fileInput.value = '';
-            return;
-        }
+function handleFileSelection(file) {
+    if (!file) return;
 
-        // Validación de tamaño (20 MB máximo)
-        const maxSizeInBytes = 20 * 1024 * 1024; // 20 MB
-        if (file.size > maxSizeInBytes) {
-            Swal.fire({
-                title: 'Archivo demasiado grande',
-                text: `Tu archivo pesa ${(file.size / (1024 * 1024)).toFixed(1)} MB. El límite máximo permitido es de 20 MB.`,
-                icon: 'warning',
-                confirmButtonColor: '#3b82f6',
-                background: 'rgba(15, 23, 42, 0.9)'
-            });
-            fileInput.value = ''; // Limpiamos el input
-            return;
-        }
-
-        const reader = new FileReader();
-        reader.onload = (e) => {
-            previewImage.src = e.target.result;
-            previewContainer.style.display = 'flex';
-            if (uploadBtnText) uploadBtnText.textContent = 'Cambiar Foto';
-            
-            // Reajustar tamaño de los mapas por si el layout se desplaza
-            setTimeout(() => {
-                formMap.invalidateSize();
-                globalMap.invalidateSize();
-            }, 300);
-        };
-        reader.readAsDataURL(file);
+    // Validar que el archivo sea una imagen
+    if (!file.type.startsWith('image/')) {
+        Swal.fire({
+            title: 'Archivo no válido',
+            text: 'Por favor selecciona un archivo de tipo imagen.',
+            icon: 'warning',
+            confirmButtonColor: '#3b82f6',
+            background: 'rgba(15, 23, 42, 0.9)'
+        });
+        return;
     }
+
+    // Validación de tamaño (20 MB máximo)
+    const maxSizeInBytes = 20 * 1024 * 1024; // 20 MB
+    if (file.size > maxSizeInBytes) {
+        Swal.fire({
+            title: 'Archivo demasiado grande',
+            text: `Tu archivo pesa ${(file.size / (1024 * 1024)).toFixed(1)} MB. El límite máximo permitido es de 20 MB.`,
+            icon: 'warning',
+            confirmButtonColor: '#3b82f6',
+            background: 'rgba(15, 23, 42, 0.9)'
+        });
+        return;
+    }
+
+    currentSelectedFile = file;
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        previewImage.src = e.target.result;
+        previewContainer.style.display = 'flex';
+        if (uploadBtnText) uploadBtnText.textContent = 'Cambiar Foto';
+        
+        // Reajustar tamaño de los mapas por si el layout se desplaza
+        setTimeout(() => {
+            if (typeof formMap !== 'undefined') formMap.invalidateSize();
+            if (typeof globalMap !== 'undefined') globalMap.invalidateSize();
+        }, 300);
+    };
+    reader.readAsDataURL(file);
+}
+
+fileInput.addEventListener('change', () => {
+    handleFileSelection(fileInput.files[0]);
 });
+
+if (cameraInput) {
+    cameraInput.addEventListener('change', () => {
+        handleFileSelection(cameraInput.files[0]);
+    });
+}
 
 btnRemovePhoto.addEventListener('click', () => {
     fileInput.value = '';
+    if (cameraInput) cameraInput.value = '';
+    currentSelectedFile = null;
     previewImage.src = '';
     previewContainer.style.display = 'none';
     if (uploadBtnText) uploadBtnText.textContent = 'Elegir Foto';
     
     // Reajustar tamaño de los mapas por si el layout se desplaza
     setTimeout(() => {
-        formMap.invalidateSize();
-        globalMap.invalidateSize();
+        if (typeof formMap !== 'undefined') formMap.invalidateSize();
+        if (typeof globalMap !== 'undefined') globalMap.invalidateSize();
     }, 300);
 });
+
+// Webcam Modal para PC
+const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+const cameraBtnWrapper = document.querySelector('.camera-btn');
+const webcamModal = document.getElementById('webcam-modal');
+const webcamVideo = document.getElementById('webcam-video');
+const webcamCanvas = document.getElementById('webcam-canvas');
+const btnCaptureWebcam = document.getElementById('btn-capture-webcam');
+const btnCloseWebcam = document.getElementById('btn-close-webcam');
+
+if (!isMobile && cameraBtnWrapper && webcamModal) {
+    cameraBtnWrapper.addEventListener('click', async (e) => {
+        e.preventDefault();
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+            webcamVideo.srcObject = stream;
+            webcamModal.style.display = 'flex';
+        } catch (err) {
+            Swal.fire('Error', 'No se pudo acceder a la cámara.', 'error');
+        }
+    });
+
+    btnCaptureWebcam.addEventListener('click', () => {
+        webcamCanvas.width = webcamVideo.videoWidth;
+        webcamCanvas.height = webcamVideo.videoHeight;
+        webcamCanvas.getContext('2d').drawImage(webcamVideo, 0, 0);
+        
+        webcamCanvas.toBlob((blob) => {
+            const file = new File([blob], "webcam-photo.jpg", { type: "image/jpeg" });
+            handleFileSelection(file);
+            closeWebcam();
+        }, 'image/jpeg', 0.9);
+    });
+
+    btnCloseWebcam.addEventListener('click', closeWebcam);
+    
+    function closeWebcam() {
+        if (webcamVideo.srcObject) {
+            webcamVideo.srcObject.getTracks().forEach(track => track.stop());
+        }
+        webcamModal.style.display = 'none';
+    }
+}
 
 // --- LÓGICA DE ACCESIBILIDAD ---
 const btnSettingsTriggers = document.querySelectorAll('.btn-settings-trigger');

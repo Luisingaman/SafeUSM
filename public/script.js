@@ -54,9 +54,7 @@ const uploadContainer = document.getElementById('upload-container');
 const userEmailText = document.getElementById('user-email');
 
 // --- ELEMENTOS DE VISTA PREVIA DE IMAGEN ---
-const galleryInput = document.getElementById('photo-upload');
-const cameraInput = document.getElementById('camera-upload');
-let currentSelectedFile = null;
+const fileInput = document.getElementById('photo-upload');
 const uploadBtnText = document.getElementById('upload-btn-text');
 const previewContainer = document.getElementById('image-preview-container');
 const previewImage = document.getElementById('image-preview');
@@ -282,15 +280,6 @@ function navigateTo(pageId) {
                 b.classList.remove('active');
             }
         });
-<<<<<<< HEAD
-        
-        // Actualizar la lista de reportes para remover los permisos de encargado
-        if (typeof renderFilteredReports === 'function') {
-            renderFilteredReports();
-        }
-
-=======
->>>>>>> 008b9e3ab1856a51efe4a0740eb72fb383632dee
         Swal.fire({
             title: 'Sesión Finalizada',
             text: 'Has salido del modo encargado.',
@@ -511,7 +500,7 @@ btnEnviar.addEventListener('click', async () => {
     }
 
     const comentario = inputComentario.value;
-    const file = currentSelectedFile;
+    const file = fileInput.files[0];
 
     if (comentario.trim() === "" || categoriaSeleccionada === "") {
         Swal.fire('Faltan Datos', 'Por favor, escribe un comentario y selecciona una categoría (Seguridad, Salud o Género).', 'warning');
@@ -570,9 +559,7 @@ btnEnviar.addEventListener('click', async () => {
         // Limpiamos los campos
         inputComentario.value = "";
         categoriaSeleccionada = "";
-        galleryInput.value = "";
-        cameraInput.value = "";
-        currentSelectedFile = null;
+        fileInput.value = "";
         botonesCategoria.forEach(b => {
             b.classList.remove('active');
             b.style.border = "none";
@@ -799,8 +786,6 @@ function renderFilteredReports() {
                             </svg>
                         </button>
                     </div>
-<<<<<<< HEAD
-=======
                     
                     <!-- Controles de Respuesta Oficial -->
                     <div class="official-comment-controls" ${currentStaffCategory ? 'style="display: none;"' : ''}>
@@ -817,7 +802,6 @@ function renderFilteredReports() {
                             <input type="password" class="official-pin" placeholder="PIN Oficial (1234)" style="width: 120px;">
                         </div>
                     </div>
->>>>>>> 008b9e3ab1856a51efe4a0740eb72fb383632dee
                 </form>
             </div>
         `;
@@ -893,8 +877,6 @@ function renderFilteredReports() {
                 });
             }
         }
-<<<<<<< HEAD
-=======
 
         // 4. Mostrar/Ocultar campos de comentario oficial
         const officialCheck = tarjeta.querySelector('.official-check');
@@ -902,29 +884,20 @@ function renderFilteredReports() {
         officialCheck.addEventListener('change', () => {
             officialFields.style.display = officialCheck.checked ? 'flex' : 'none';
         });
->>>>>>> 008b9e3ab1856a51efe4a0740eb72fb383632dee
 
-        // 4. Mostrar/Ocultar campos de comentario oficial (ELIMINADO)
-        
-        // 5. Enviar Comentario (con soporte de perfiles oficiales para personal logueado)
+        // 5. Enviar Comentario (con soporte de perfiles oficiales)
         const commentForm = tarjeta.querySelector('.comment-form');
         commentForm.addEventListener('submit', (e) => {
             e.preventDefault();
             const input = commentForm.querySelector('.comment-input');
             const text = input.value.trim();
             
-<<<<<<< HEAD
-            let isOfficial = false;
-=======
             let isOfficial = officialCheck.checked;
->>>>>>> 008b9e3ab1856a51efe4a0740eb72fb383632dee
             let role = "Normal";
             
             if (currentStaffCategory) {
                 isOfficial = true;
                 role = "Encargado de " + currentStaffCategory;
-<<<<<<< HEAD
-=======
             } else if (isOfficial) {
                 const selectRole = commentForm.querySelector('.official-select').value;
                 const pin = commentForm.querySelector('.official-pin').value;
@@ -940,7 +913,6 @@ function renderFilteredReports() {
                     return;
                 }
                 role = selectRole;
->>>>>>> 008b9e3ab1856a51efe4a0740eb72fb383632dee
             }
             
             if (text) {
@@ -953,6 +925,9 @@ function renderFilteredReports() {
                     rolOficial: role
                 }).then(() => {
                     input.value = '';
+                    officialCheck.checked = false;
+                    officialFields.style.display = 'none';
+                    commentForm.querySelector('.official-pin').value = '';
                 }).catch(error => {
                     Swal.fire('Error', 'No se pudo publicar el comentario: ' + error.message, 'error');
                 });
@@ -1139,7 +1114,8 @@ function getColor(categoria) {
 }
 
 // --- MANEJO DE VISTA PREVIA DE LA IMAGEN ---
-function handleFileSelection(file) {
+fileInput.addEventListener('change', () => {
+    const file = fileInput.files[0];
     if (file) {
         // Validar que el archivo sea una imagen
         if (!file.type.startsWith('image/')) {
@@ -1150,6 +1126,7 @@ function handleFileSelection(file) {
                 confirmButtonColor: '#3b82f6',
                 background: 'rgba(15, 23, 42, 0.9)'
             });
+            fileInput.value = '';
             return;
         }
 
@@ -1163,10 +1140,9 @@ function handleFileSelection(file) {
                 confirmButtonColor: '#3b82f6',
                 background: 'rgba(15, 23, 42, 0.9)'
             });
+            fileInput.value = ''; // Limpiamos el input
             return;
         }
-
-        currentSelectedFile = file;
 
         const reader = new FileReader();
         reader.onload = (e) => {
@@ -1182,26 +1158,10 @@ function handleFileSelection(file) {
         };
         reader.readAsDataURL(file);
     }
-}
-
-galleryInput.addEventListener('change', () => {
-    if (galleryInput.files.length > 0) {
-        cameraInput.value = '';
-        handleFileSelection(galleryInput.files[0]);
-    }
-});
-
-cameraInput.addEventListener('change', () => {
-    if (cameraInput.files.length > 0) {
-        galleryInput.value = '';
-        handleFileSelection(cameraInput.files[0]);
-    }
 });
 
 btnRemovePhoto.addEventListener('click', () => {
-    galleryInput.value = '';
-    cameraInput.value = '';
-    currentSelectedFile = null;
+    fileInput.value = '';
     previewImage.src = '';
     previewContainer.style.display = 'none';
     if (uploadBtnText) uploadBtnText.textContent = 'Elegir Foto';
@@ -1211,68 +1171,6 @@ btnRemovePhoto.addEventListener('click', () => {
         formMap.invalidateSize();
         globalMap.invalidateSize();
     }, 300);
-});
-
-// --- LÓGICA DE WEBCAM PARA PC ---
-const webcamModal = document.getElementById('webcam-modal');
-const webcamVideo = document.getElementById('webcam-video');
-const webcamCanvas = document.getElementById('webcam-canvas');
-const btnCaptureWebcam = document.getElementById('btn-capture-webcam');
-const btnCloseWebcam = document.getElementById('btn-close-webcam');
-let webcamStream = null;
-
-function openWebcamModal() {
-    webcamModal.style.display = 'flex';
-    if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-        navigator.mediaDevices.getUserMedia({ video: true })
-            .then(stream => {
-                webcamStream = stream;
-                webcamVideo.srcObject = stream;
-            })
-            .catch(err => {
-                console.error("Error accediendo a la cámara: ", err);
-                Swal.fire('Error', 'No se pudo acceder a la cámara. Asegúrate de dar los permisos necesarios.', 'error');
-                closeWebcamModal();
-            });
-    } else {
-        Swal.fire('Error', 'Tu navegador no soporta acceso a la cámara.', 'error');
-        closeWebcamModal();
-    }
-}
-
-function closeWebcamModal() {
-    webcamModal.style.display = 'none';
-    if (webcamStream) {
-        webcamStream.getTracks().forEach(track => track.stop());
-        webcamStream = null;
-    }
-}
-
-btnCloseWebcam.addEventListener('click', closeWebcamModal);
-
-btnCaptureWebcam.addEventListener('click', () => {
-    if (webcamStream) {
-        webcamCanvas.width = webcamVideo.videoWidth;
-        webcamCanvas.height = webcamVideo.videoHeight;
-        const ctx = webcamCanvas.getContext('2d');
-        ctx.drawImage(webcamVideo, 0, 0, webcamCanvas.width, webcamCanvas.height);
-        
-        webcamCanvas.toBlob((blob) => {
-            const file = new File([blob], "webcam_capture.jpg", { type: "image/jpeg" });
-            galleryInput.value = '';
-            cameraInput.value = '';
-            handleFileSelection(file);
-            closeWebcamModal();
-        }, 'image/jpeg', 0.9);
-    }
-});
-
-cameraInput.addEventListener('click', (e) => {
-    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-    if (!isMobile) {
-        e.preventDefault();
-        openWebcamModal();
-    }
 });
 
 // --- LÓGICA DE ACCESIBILIDAD ---

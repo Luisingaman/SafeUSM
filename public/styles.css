@@ -735,31 +735,11 @@ html[data-theme="photophobia"] body {
 /* Responsive */
 @media (max-width: 640px) {
     .glass-panel {
-        padding: 1.5rem 1rem;
-    }
-
-    .left-actions {
-        position: relative;
-        top: auto;
-        left: auto;
-        flex-direction: row !important;
-        flex-wrap: wrap;
-        justify-content: center;
-        width: 100%;
-        margin-bottom: 0.5rem;
-    }
-
-    .user-actions {
-        position: relative;
-        top: auto;
-        right: auto;
-        justify-content: center;
-        width: 100%;
-        margin-bottom: 1.5rem;
+        padding: 2rem 1.5rem;
     }
 
     .title {
-        font-size: 2.2rem;
+        font-size: 2.5rem;
     }
 
     .report-header {

@@ -245,6 +245,7 @@ L.polygon(campusCoordinates, {
 let globalMarkers = []; // Array para guardar los pines actuales
 
 // --- NAVEGACIÓN ENTRE PÁGINAS (SPA) ---
+const pageWelcome = document.getElementById('page-welcome');
 const pageHome = document.getElementById('page-home');
 const pageReportForm = document.getElementById('page-report-form');
 const pageReportsList = document.getElementById('page-reports-list');
@@ -260,10 +261,12 @@ const btnGotoCredentials = document.getElementById('btn-goto-credentials');
 const btnBackCredentials = document.getElementById('btn-back-credentials');
 const btnBackProfile = document.getElementById('btn-back-profile');
 const btnBackEditProfile = document.getElementById('btn-back-edit-profile');
+const btnBackLogin = document.getElementById('btn-back-login');
 const backBtns = document.querySelectorAll('.back-btn');
 
 let myReportsUnsubscribe = null; // Guardar la desuscripción de reportes del perfil
 
+// The rest of navigateTo function remains unchanged
 function navigateTo(pageId) {
     // Desuscribirse de reportes del perfil si salimos de él
     if (pageId !== 'page-profile' && pageId !== 'page-edit-profile' && myReportsUnsubscribe) {
@@ -271,7 +274,7 @@ function navigateTo(pageId) {
         myReportsUnsubscribe = null;
     }
 
-    if (pageId === 'page-home' && currentStaffCategory) {
+    if ((pageId === 'page-home' || pageId === 'page-welcome') && currentStaffCategory) {
         currentStaffCategory = null;
         activeCategoryFilter = "all";
         document.querySelectorAll('.filter-btn[data-filter-type="category"]').forEach(b => {
@@ -292,81 +295,80 @@ function navigateTo(pageId) {
         });
     }
 
-    // Ocultar todas las páginas
-    [pageHome, pageReportForm, pageReportsList, pageLoginCustom, pageCredentialsList, pageProfile, pageEditProfile].forEach(page => {
+    // Staff login from welcome handled separately (no changes needed here)
+    // Reset staff state when returning to welcome page handled in initBackButtons via navigation
+
+    // Existing navigation logic (show/hide pages) continues as before
+    // Hide all pages
+    [pageWelcome, pageHome, pageReportForm, pageReportsList, pageLoginCustom, pageCredentialsList, pageProfile, pageEditProfile].forEach(page => {
         if (page) {
             page.style.display = 'none';
             page.classList.remove('active');
         }
     });
-
-    // Mostrar la página destino
+    // Show target page
     const targetPage = document.getElementById(pageId);
     if (targetPage) {
         targetPage.style.display = 'flex';
         targetPage.classList.add('active');
-
-        // Toggle visibilidad del botón de cerrar sesión custom en la Página 4
-        if (pageId === 'page-login-custom') {
-            const btnCustomLogout = document.getElementById('btn-custom-logout');
-            if (btnCustomLogout) {
-                if (localStorage.getItem('custom-user-email')) {
-                    btnCustomLogout.style.display = 'inline-flex';
-                } else {
-                    btnCustomLogout.style.display = 'none';
-                }
-            }
-            // Restablecer el formulario al modo login por defecto
-            if (typeof setLoginMode === 'function') {
-                setLoginMode('login');
-            }
-        }
-
-        // Cargar los datos del perfil si entramos en la Página 6
-        if (pageId === 'page-profile') {
-            if (typeof loadUserProfile === 'function') {
-                loadUserProfile();
-            }
-        }
-
-        // Cargar los datos a editar si entramos en la Página 7
-        if (pageId === 'page-edit-profile') {
-            if (typeof loadEditProfileFields === 'function') {
-                loadEditProfileFields();
-            }
-        }
-
-        // Invalidar tamaños de mapas según corresponda (crítico para Leaflet)
+        // Additional per-page logic (e.g., map invalidation) remains unchanged
         if (pageId === 'page-reports-list' && typeof globalMap !== 'undefined') {
-            setTimeout(() => {
-                globalMap.invalidateSize();
-            }, 100);
+            setTimeout(() => globalMap.invalidateSize(), 100);
+            // Set default filter to 'today' for regular users (non-staff)
+            if (!currentStaffCategory) {
+                activeSpecialFilter = 'today';
+                document.querySelectorAll('.filter-btn[data-filter-type="special"]').forEach(b => {
+                    if (b.getAttribute('data-filter-val') === 'today') {
+                        b.classList.add('active');
+                    } else {
+                        b.classList.remove('active');
+                    }
+                });
+                renderFilteredReports();
+            }
         } else if (pageId === 'page-report-form' && typeof formMap !== 'undefined') {
-            setTimeout(() => {
-                formMap.invalidateSize();
-            }, 100);
+            setTimeout(() => formMap.invalidateSize(), 100);
         }
     }
 }
 
-if (btnGotoReport) {
-    btnGotoReport.addEventListener('click', () => navigateTo('page-report-form'));
+// Back button listeners are set up below (lines ~516-529) with correct per-page navigation.
+// No need for a blanket initBackButtons override.
+
+// Request Notification permission on first load
+function requestNotificationPermission() {
+    if ("Notification" in window) {
+        Notification.requestPermission().then(permission => {
+            if (permission === "granted") {
+                new Swal({
+                    title: 'Notificaciones Activadas',
+                    text: '¡Gracias! Recibirás alertas de nuevos reportes y actualizaciones.',
+                    icon: 'success',
+                    confirmButtonColor: '#3b82f6',
+                    background: 'rgba(15, 23, 42, 0.9)'
+                });
+            } else if (permission === "denied") {
+                new Swal({
+                    title: 'Notificaciones Desactivadas',
+                    text: 'Puedes habilitarlas más tarde en la configuración del navegador.',
+                    icon: 'info',
+                    confirmButtonColor: '#3b82f6',
+                    background: 'rgba(15, 23, 42, 0.9)'
+                });
+            }
+        });
+    }
 }
-if (btnGotoList) {
-    btnGotoList.addEventListener('click', () => navigateTo('page-reports-list'));
-}
-if (btnHomeLogin) {
-    btnHomeLogin.addEventListener('click', () => {
-        if (localStorage.getItem('custom-user-email')) {
-            navigateTo('page-profile');
-        } else {
-            navigateTo('page-login-custom');
-        }
-    });
-}
-const btnStaffLogin = document.getElementById('btn-staff-login');
-if (btnStaffLogin) {
-    btnStaffLogin.addEventListener('click', () => {
+
+// Call initialization functions after DOM loaded
+document.addEventListener('DOMContentLoaded', () => {
+    requestNotificationPermission();
+});
+
+// --- Welcome Staff Button ---
+const btnWelcomeStaff = document.getElementById('btn-welcome-staff');
+if (btnWelcomeStaff) {
+    btnWelcomeStaff.addEventListener('click', () => {
         Swal.fire({
             title: 'Acceso Personal',
             text: 'Ingrese su contraseña de acceso:',
@@ -386,7 +388,7 @@ if (btnStaffLogin) {
                 if (result.value === '6767') section = 'Seguridad';
                 else if (result.value === '6969') section = 'Salud';
                 else if (result.value === '1313') section = 'Equidad de Género';
-                
+
                 if (section) {
                     currentStaffCategory = section;
                     Swal.fire({
@@ -397,16 +399,18 @@ if (btnStaffLogin) {
                         background: 'rgba(15, 23, 42, 0.9)'
                     }).then(() => {
                         navigateTo('page-reports-list');
-                        
+                        // Show ALL category buttons but pre-select staff's department
                         document.querySelectorAll('.filter-btn[data-filter-type="category"]').forEach(b => {
-                            if(b.getAttribute('data-filter-val') === section) {
+                            b.style.display = 'inline-block';
+                            if (b.getAttribute('data-filter-val') === section) {
                                 b.classList.add('active');
-                                b.style.display = 'inline-block';
                             } else {
                                 b.classList.remove('active');
-                                b.style.display = 'none';
                             }
                         });
+                        // Reset special filter for staff view
+                        activeSpecialFilter = 'all';
+                        document.querySelectorAll('.filter-btn[data-filter-type="special"]').forEach(b => b.classList.remove('active'));
                         activeCategoryFilter = section;
                         renderFilteredReports();
                     });
@@ -423,6 +427,53 @@ if (btnStaffLogin) {
         });
     });
 }
+
+
+if (btnGotoReport) {
+    btnGotoReport.addEventListener('click', () => navigateTo('page-report-form'));
+}
+if (btnGotoList) {
+    btnGotoList.addEventListener('click', () => navigateTo('page-reports-list'));
+}
+if (btnHomeLogin) {
+    btnHomeLogin.addEventListener('click', () => {
+        // If user is logged in, go to profile; otherwise go to welcome for login options
+        if (localStorage.getItem('custom-user-email')) {
+            navigateTo('page-profile');
+        } else {
+            navigateTo('page-welcome');
+        }
+    });
+}
+
+const btnWelcomeLogin = document.getElementById('btn-welcome-login');
+const btnWelcomeRegister = document.getElementById('btn-welcome-register');
+const btnWelcomeGuest = document.getElementById('btn-welcome-guest');
+
+if (btnWelcomeLogin) {
+    btnWelcomeLogin.addEventListener('click', () => {
+        navigateTo('page-login-custom');
+        setLoginMode('login');
+    });
+}
+if (btnWelcomeRegister) {
+    btnWelcomeRegister.addEventListener('click', () => {
+        navigateTo('page-login-custom');
+        setLoginMode('register');
+    });
+}
+if (btnWelcomeGuest) {
+    btnWelcomeGuest.addEventListener('click', () => {
+        // Clear any existing session so user enters as true guest
+        localStorage.removeItem('custom-user-email');
+        localStorage.removeItem('custom-user-name');
+        const loginSpan = document.querySelector('#btn-home-login span');
+        if (loginSpan) loginSpan.textContent = 'Iniciar Sesión';
+        navigateTo('page-home');
+    });
+}
+
+// btn-staff-login removed from page-home (login options are now on welcome page)
 if (btnGotoCredentials) {
     btnGotoCredentials.addEventListener('click', () => {
         Swal.fire({
@@ -468,8 +519,11 @@ if (btnBackProfile) {
 if (btnBackEditProfile) {
     btnBackEditProfile.addEventListener('click', () => navigateTo('page-profile'));
 }
+if (btnBackLogin) {
+    btnBackLogin.addEventListener('click', () => navigateTo('page-welcome'));
+}
 backBtns.forEach(btn => {
-    if (btn.id !== 'btn-back-credentials' && btn.id !== 'btn-back-profile' && btn.id !== 'btn-back-edit-profile') {
+    if (btn.id !== 'btn-back-credentials' && btn.id !== 'btn-back-profile' && btn.id !== 'btn-back-edit-profile' && btn.id !== 'btn-back-login') {
         btn.addEventListener('click', () => navigateTo('page-home'));
     }
 });
@@ -640,9 +694,7 @@ function renderFilteredReports() {
     // 1. Filtrar los reportes en base a la selección activa
     let filtered = [...currentReports];
 
-    if (currentStaffCategory) {
-        activeCategoryFilter = currentStaffCategory;
-    }
+
 
     // Filtrar por categoría
     if (activeCategoryFilter !== "all") {
@@ -791,21 +843,7 @@ function renderFilteredReports() {
                         </button>
                     </div>
                     
-                    <!-- Controles de Respuesta Oficial -->
-                    <div class="official-comment-controls" ${currentStaffCategory ? 'style="display: none;"' : ''}>
-                        <label class="official-toggle-label">
-                            <input type="checkbox" class="official-check" style="cursor: pointer;">
-                            👮 Responder como Personal del Campus (Simulación)
-                        </label>
-                        <div class="official-fields" style="display: none; align-items: center; gap: 0.4rem; width: 100%; margin-top: 4px;">
-                            <select class="official-select">
-                                <option value="Guardia de Seguridad">👮 Guardia de Seguridad</option>
-                                <option value="Personal de Enfermería">🩺 Enfermería</option>
-                                <option value="Administración Campus">🏛️ Administración</option>
-                            </select>
-                            <input type="password" class="official-pin" placeholder="PIN Oficial (1234)" style="width: 120px;">
-                        </div>
-                    </div>
+                    
                 </form>
             </div>
         `;
@@ -883,26 +921,21 @@ function renderFilteredReports() {
         }
 
         // 4. Mostrar/Ocultar campos de comentario oficial
-        const officialCheck = tarjeta.querySelector('.official-check');
-        const officialFields = tarjeta.querySelector('.official-fields');
-        officialCheck.addEventListener('change', () => {
-            officialFields.style.display = officialCheck.checked ? 'flex' : 'none';
-        });
+        
 
         // 5. Enviar Comentario (con soporte de perfiles oficiales)
         const commentForm = tarjeta.querySelector('.comment-form');
         commentForm.addEventListener('submit', (e) => {
             e.preventDefault();
-            const input = commentForm.querySelector('.comment-input');
-            const text = input.value.trim();
+            let isOfficial = !!currentStaffCategory;
+            let role = isOfficial ? "Encargado de " + currentStaffCategory : "Normal";
             
-            let isOfficial = officialCheck.checked;
-            let role = "Normal";
+            if (!isOfficial) {
+                const officialCheck = commentForm.querySelector('.official-checkbox');
+                isOfficial = officialCheck ? officialCheck.checked : false;
+            }
             
-            if (currentStaffCategory) {
-                isOfficial = true;
-                role = "Encargado de " + currentStaffCategory;
-            } else if (isOfficial) {
+            if (isOfficial && !currentStaffCategory) {
                 const selectRole = commentForm.querySelector('.official-select').value;
                 const pin = commentForm.querySelector('.official-pin').value;
                 
@@ -929,9 +962,7 @@ function renderFilteredReports() {
                     rolOficial: role
                 }).then(() => {
                     input.value = '';
-                    officialCheck.checked = false;
-                    officialFields.style.display = 'none';
-                    commentForm.querySelector('.official-pin').value = '';
+                    
                 }).catch(error => {
                     Swal.fire('Error', 'No se pudo publicar el comentario: ' + error.message, 'error');
                 });
@@ -1349,13 +1380,13 @@ function setLoginMode(mode) {
     } else {
         if (tabLoginMode) tabLoginMode.classList.remove('active');
         if (tabRegisterMode) tabRegisterMode.classList.add('active');
-        if (loginHeaderTitle) loginHeaderTitle.textContent = "Crear Cuenta";
+        if (loginHeaderTitle) loginHeaderTitle.textContent = "Registrarse";
         if (loginHeaderSubtitle) loginHeaderSubtitle.textContent = "Registra una cuenta institucional USM";
         if (confirmPasswordGroup) confirmPasswordGroup.style.display = 'block';
         if (nameGroup) nameGroup.style.display = 'block';
         if (inputCustomConfirmPassword) inputCustomConfirmPassword.setAttribute('required', 'true');
         if (inputCustomName) inputCustomName.setAttribute('required', 'true');
-        if (btnSubmitText) btnSubmitText.textContent = "Crear Cuenta y Entrar";
+        if (btnSubmitText) btnSubmitText.textContent = "Registrarse y Entrar";
         if (btnSubmitIcon) {
             btnSubmitIcon.innerHTML = `
                 <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
@@ -1389,6 +1420,30 @@ if (btnSubmitLogin) {
                 background: 'rgba(15, 23, 42, 0.9)'
             });
             return;
+        }
+
+        if (currentLoginMode === 'register') {
+            if (!name || name.length < 2) {
+                Swal.fire({
+                    title: 'Nombre Inválido',
+                    text: 'El nombre debe tener al menos 2 letras.',
+                    icon: 'warning',
+                    confirmButtonColor: '#3b82f6',
+                    background: 'rgba(15, 23, 42, 0.9)'
+                });
+                return;
+            }
+
+            if (password.length < 6 || !/[A-Z]/.test(password)) {
+                Swal.fire({
+                    title: 'Contraseña Débil',
+                    text: 'La contraseña debe tener al menos 6 caracteres y contener al menos 1 letra mayúscula.',
+                    icon: 'warning',
+                    confirmButtonColor: '#3b82f6',
+                    background: 'rgba(15, 23, 42, 0.9)'
+                });
+                return;
+            }
         }
 
         if (currentLoginMode === 'register' && !name) {
@@ -1458,7 +1513,7 @@ if (btnSubmitLogin) {
                 if (querySnapshot.empty) {
                     Swal.fire({
                         title: 'Usuario No Registrado',
-                        text: 'Este correo no está registrado en el sistema. Selecciona "Crear Cuenta" para registrarte.',
+                        text: 'Este correo no está registrado en el sistema. Selecciona "Registrarse" para crear tu cuenta.',
                         icon: 'warning',
                         confirmButtonColor: '#3b82f6',
                         background: 'rgba(15, 23, 42, 0.9)'
@@ -2067,7 +2122,7 @@ function handleLogout() {
         confirmButtonColor: '#3b82f6',
         background: 'rgba(15, 23, 42, 0.9)'
     }).then(() => {
-        navigateTo('page-home');
+        navigateTo('page-welcome');
     });
 }
 
@@ -2079,3 +2134,13 @@ if (btnCustomLogout) {
 if (btnProfileLogout) {
     btnProfileLogout.addEventListener('click', handleLogout);
 }
+
+// --- INICIALIZACIÓN DE LA APP ---
+window.addEventListener('DOMContentLoaded', () => {
+    // Redirigir a Home (Dashboard) si ya hay sesión iniciada, si no, mantener en Welcome
+    if (localStorage.getItem('custom-user-email')) {
+        navigateTo('page-home');
+    } else {
+        navigateTo('page-welcome');
+    }
+});

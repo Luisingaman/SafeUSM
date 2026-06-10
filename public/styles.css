@@ -344,6 +344,19 @@ body {
     transform: translateY(0);
 }
 
+.welcome-btn {
+    padding: 1.15rem 2rem;
+    font-size: 1.1rem;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    justify-content: center;
+}
+
+.welcome-btn.secondary-btn:hover {
+    background: rgba(59, 130, 246, 0.2) !important;
+    border-color: var(--accent-hover) !important;
+    transform: translateY(-2px);
+    box-shadow: 0 10px 20px -5px rgba(59, 130, 246, 0.3) !important;
+}
 
 .reports-header {
     width: 100%;
@@ -624,6 +637,12 @@ html[data-theme="light"] .report-card:hover {
 }
 html[data-theme="light"] .report-text {
     color: #0f294a;
+}
+html[data-theme="light"] .access-btn {
+    background: rgba(15, 41, 74, 0.05);
+}
+html[data-theme="light"] .access-btn:hover {
+    background: rgba(15, 41, 74, 0.1);
 }
 html[data-theme="light"] .comment-text {
     color: #1e3a5f;
@@ -1692,7 +1711,7 @@ html[data-theme="low-vision"] .input-field-custom:focus {
 }
 
 .webcam-content {
-    background: var(--glass-bg);
+    background: var(--panel-bg);
     padding: 2rem;
     border-radius: 24px;
     border: 1px solid var(--panel-border);

@@ -152,6 +152,111 @@ const campusCoordinates = [
     [-33.4899900, -70.6205564]
 ];
 
+// --- SECTORES DEL CAMPUS SAN JOAQUÍN ---
+const sectorEdificiosE = [
+    [-33.48940, -70.62060],
+    [-33.48940, -70.62035],
+    [-33.49040, -70.62035],
+    [-33.49040, -70.62060]
+];
+
+const sectorEdificioB = [
+    [-33.48940, -70.62035],
+    [-33.48940, -70.61910],
+    [-33.49010, -70.61910],
+    [-33.49010, -70.62035]
+];
+
+const sectorEdificioF = [
+    [-33.48940, -70.61910],
+    [-33.48940, -70.61800],
+    [-33.49040, -70.61800],
+    [-33.49040, -70.61910]
+];
+
+const sectorCanchas = [
+    [-33.49010, -70.62020],
+    [-33.49010, -70.61910],
+    [-33.49130, -70.61910],
+    [-33.49130, -70.62020]
+];
+
+const sectorEdificioC = [
+    [-33.49040, -70.61910],
+    [-33.49040, -70.61870],
+    [-33.49110, -70.61870],
+    [-33.49110, -70.61910]
+];
+
+const sectorEdificioA = [
+    [-33.48990, -70.61870],
+    [-33.48990, -70.61800],
+    [-33.49150, -70.61800],
+    [-33.49150, -70.61870]
+];
+
+const sectorEdificioK = [
+    [-33.49130, -70.62020],
+    [-33.49130, -70.61830],
+    [-33.49180, -70.61830],
+    [-33.49180, -70.62020]
+];
+
+let sectores = [
+    { name: "Edificios E (E1, E2, E3)", polygon: sectorEdificiosE, color: "#6b7280" },
+    { name: "Edificio B", polygon: sectorEdificioB, color: "#f59e0b" },
+    { name: "Edificio F", polygon: sectorEdificioF, color: "#10b981" },
+    { name: "Canchas de Fútbol", polygon: sectorCanchas, color: "#22c55e" },
+    { name: "Edificio C", polygon: sectorEdificioC, color: "#8b5cf6" },
+    { name: "Edificio A", polygon: sectorEdificioA, color: "#3b82f6" },
+    { name: "Futuro Edificio K", polygon: sectorEdificioK, color: "#ec4899" }
+];
+
+let editorMap;
+let editorPolygon = null;
+let editorMarkers = [];
+let tempSectores = [];
+let editorBackgroundPolygons = [];
+
+function getSectorFromCoords(lat, lng) {
+    for (const sec of sectores) {
+        if (isPointInPolygon(lat, lng, sec.polygon)) {
+            return sec.name;
+        }
+    }
+    return "Patios y Áreas Verdes";
+}
+
+function updateDetectedSector() {
+    const sector = getSectorFromCoords(currentLat, currentLng);
+    const badge = document.getElementById('detected-sector-badge');
+    if (badge) {
+        badge.textContent = sector;
+        const secObj = sectores.find(s => s.name === sector);
+        if (secObj) {
+            badge.style.backgroundColor = secObj.color + '26';
+            badge.style.color = secObj.color;
+            badge.style.borderColor = secObj.color + '4d';
+        } else {
+            badge.style.backgroundColor = 'rgba(99, 102, 241, 0.15)';
+            badge.style.color = '#818cf8';
+            badge.style.borderColor = 'rgba(99, 102, 241, 0.3)';
+        }
+    }
+}
+
+// Cargar sectores personalizados de Firestore al iniciar el script si existen
+try {
+    db.collection("config").doc("map_sectors").get().then(doc => {
+        if (doc.exists && doc.data().sectores) {
+            sectores = doc.data().sectores;
+            updateDetectedSector();
+        }
+    });
+} catch (e) {
+    console.warn("Error al precargar sectores desde Firestore:", e);
+}
+
 // 1. Mapa del Formulario
 const formMap = L.map('form-map', mapOptions).setView(usmSanJoaquin, 17);
 L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
@@ -162,7 +267,7 @@ L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r
 L.polygon(campusCoordinates, {
     color: '#3b82f6',
     fillColor: '#3b82f6',
-    fillOpacity: 0.08,
+    fillOpacity: 0.04,
     weight: 2,
     dashArray: '5, 8'
 }).addTo(formMap);
@@ -174,11 +279,13 @@ formMarker.on('dragend', function(e) {
     if (isPointInPolygon(pos.lat, pos.lng, campusCoordinates)) {
         currentLat = pos.lat;
         currentLng = pos.lng;
+        updateDetectedSector();
     } else {
         // Devolver el marcador al centro si se arrastra fuera
         formMarker.setLatLng(usmSanJoaquin);
         currentLat = usmSanJoaquin[0];
         currentLng = usmSanJoaquin[1];
+        updateDetectedSector();
         Swal.fire('Ubicación Inválida', 'Por favor, arrastra el marcador dentro del área del campus delimitada en azul.', 'warning');
     }
 });
@@ -189,6 +296,7 @@ formMap.on('click', function(e) {
         formMarker.setLatLng(e.latlng);
         currentLat = e.latlng.lat;
         currentLng = e.latlng.lng;
+        updateDetectedSector();
     } else {
         Swal.fire('Ubicación Inválida', 'Debes hacer clic dentro de la zona del campus delimitada en azul.', 'warning');
     }
@@ -212,6 +320,7 @@ btnLocation.addEventListener('click', () => {
                     formMap.setView(newPos, 18);
                     formMarker.setLatLng(newPos);
                     locationStatus.textContent = "Ubicación obtenida.";
+                    updateDetectedSector();
                 } else {
                     locationStatus.textContent = "Ubicación fuera del campus.";
                     Swal.fire('Ubicación Fuera de Rango', 'Tu ubicación actual está fuera del área del campus delimitada en azul. El marcador se mantendrá en el centro del campus.', 'warning');
@@ -237,10 +346,13 @@ L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r
 L.polygon(campusCoordinates, {
     color: '#3b82f6',
     fillColor: '#3b82f6',
-    fillOpacity: 0.08,
+    fillOpacity: 0.04,
     weight: 2,
     dashArray: '5, 8'
 }).addTo(globalMap);
+
+// Inicializar el sector por primera vez en el badge
+updateDetectedSector();
 
 let globalMarkers = []; // Array para guardar los pines actuales
 
@@ -254,6 +366,7 @@ const pageCredentialsList = document.getElementById('page-credentials-list');
 const pageProfile = document.getElementById('page-profile');
 const pageEditProfile = document.getElementById('page-edit-profile');
 const pageAiRules = document.getElementById('page-ai-rules');
+const pageEditMapSectors = document.getElementById('page-edit-map-sectors');
 
 const btnGotoReport = document.getElementById('btn-goto-report');
 const btnGotoList = document.getElementById('btn-goto-list');
@@ -301,7 +414,7 @@ function navigateTo(pageId) {
 
     // Existing navigation logic (show/hide pages) continues as before
     // Hide all pages
-    [pageWelcome, pageHome, pageReportForm, pageReportsList, pageLoginCustom, pageCredentialsList, pageProfile, pageEditProfile, pageAiRules].forEach(page => {
+    [pageWelcome, pageHome, pageReportForm, pageReportsList, pageLoginCustom, pageCredentialsList, pageProfile, pageEditProfile, pageAiRules, pageEditMapSectors].forEach(page => {
         if (page) {
             page.style.display = 'none';
             page.classList.remove('active');
@@ -329,6 +442,15 @@ function navigateTo(pageId) {
             }
         } else if (pageId === 'page-report-form' && typeof formMap !== 'undefined') {
             setTimeout(() => formMap.invalidateSize(), 100);
+        } else if (pageId === 'page-edit-map-sectors') {
+            setTimeout(() => {
+                if (typeof editorMap !== 'undefined') {
+                    editorMap.invalidateSize();
+                } else {
+                    setupEditorMap();
+                }
+                loadSectorsInEditorList();
+            }, 100);
         } else if (pageId === 'page-ai-rules') {
             loadAiRules();
         } else if (pageId === 'page-home') {
@@ -377,11 +499,180 @@ function requestNotificationPermission() {
 document.addEventListener('DOMContentLoaded', () => {
     requestNotificationPermission();
     
-    // Solicitar inicio de sesión inmediatamente al cargar la página si no hay sesión activa
-    const savedCustomEmail = localStorage.getItem('custom-user-email');
-    if (!savedCustomEmail) {
-        navigateTo('page-login-custom');
-        setLoginMode('login');
+    // Configurar botones de edición de sectores con contraseña 1234
+    const btnEditSectors = document.getElementById('btn-edit-sectors');
+    if (btnEditSectors) {
+        btnEditSectors.addEventListener('click', promptForSectorEditing);
+    }
+    
+    const btnEditSectorsGlobal = document.getElementById('btn-edit-sectors-global');
+    if (btnEditSectorsGlobal) {
+        btnEditSectorsGlobal.addEventListener('click', promptForSectorEditing);
+    }
+
+    const btnBackEditMapSectors = document.getElementById('btn-back-edit-map-sectors');
+    if (btnBackEditMapSectors) {
+        btnBackEditMapSectors.addEventListener('click', () => navigateTo('page-home'));
+    }
+
+    // Inicializar escuchas del formulario de edición de sectores
+    const selectSector = document.getElementById('editor-sector-select');
+    if (selectSector) {
+        selectSector.addEventListener('change', (e) => {
+            loadSectorInEditor(parseInt(e.target.value, 10));
+        });
+    }
+
+    const nameInput = document.getElementById('editor-sector-name');
+    if (nameInput) {
+        nameInput.addEventListener('input', (e) => {
+            const select = document.getElementById('editor-sector-select');
+            if (!select) return;
+            const index = parseInt(select.value, 10);
+            if (index >= 0 && index < tempSectores.length) {
+                tempSectores[index].name = e.target.value;
+                select.options[index].text = e.target.value;
+            }
+        });
+    }
+
+    const colorInput = document.getElementById('editor-sector-color');
+    const colorHexInput = document.getElementById('editor-sector-color-hex');
+
+    if (colorInput && colorHexInput) {
+        colorInput.addEventListener('input', (e) => {
+            const val = e.target.value;
+            colorHexInput.value = val;
+            updateActiveSectorColor(val);
+        });
+        colorHexInput.addEventListener('input', (e) => {
+            let val = e.target.value;
+            if (val.startsWith('#') && val.length === 7) {
+                colorInput.value = val;
+                updateActiveSectorColor(val);
+            }
+        });
+    }
+
+    const btnAddVertex = document.getElementById('btn-editor-add-vertex');
+    if (btnAddVertex) {
+        btnAddVertex.addEventListener('click', () => {
+            const select = document.getElementById('editor-sector-select');
+            if (!select) return;
+            const index = parseInt(select.value, 10);
+            if (index >= 0 && index < tempSectores.length) {
+                const center = editorMap.getCenter();
+                tempSectores[index].polygon.push([center.lat, center.lng]);
+                loadSectorInEditor(index);
+            }
+        });
+    }
+
+    const btnDeleteVertex = document.getElementById('btn-editor-delete-vertex');
+    if (btnDeleteVertex) {
+        btnDeleteVertex.addEventListener('click', () => {
+            const select = document.getElementById('editor-sector-select');
+            if (!select) return;
+            const index = parseInt(select.value, 10);
+            if (index >= 0 && index < tempSectores.length) {
+                if (tempSectores[index].polygon.length > 3) {
+                    tempSectores[index].polygon.pop();
+                    loadSectorInEditor(index);
+                } else {
+                    Swal.fire('Atención', 'Un sector debe tener al menos 3 vértices para formar un polígono.', 'warning');
+                }
+            }
+        });
+    }
+
+    const btnNewSector = document.getElementById('btn-editor-new-sector');
+    if (btnNewSector) {
+        btnNewSector.addEventListener('click', () => {
+            const center = editorMap.getCenter();
+            const name = "Nuevo Sector " + (tempSectores.length + 1);
+            const offset = 0.0004;
+            const newSec = {
+                name: name,
+                color: '#3b82f6',
+                polygon: [
+                    [center.lat + offset, center.lng],
+                    [center.lat - offset, center.lng + offset],
+                    [center.lat - offset, center.lng - offset]
+                ]
+            };
+            tempSectores.push(newSec);
+            refreshSectorSelect(tempSectores.length - 1);
+        });
+    }
+
+    const btnDeleteSector = document.getElementById('btn-editor-delete-sector');
+    if (btnDeleteSector) {
+        btnDeleteSector.addEventListener('click', () => {
+            const select = document.getElementById('editor-sector-select');
+            if (!select) return;
+            const index = parseInt(select.value, 10);
+            if (index >= 0 && index < tempSectores.length) {
+                Swal.fire({
+                    title: '¿Eliminar Sector?',
+                    text: `¿Estás seguro de que deseas eliminar el sector "${tempSectores[index].name}"?`,
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonColor: '#ef4444',
+                    cancelButtonColor: '#64748b',
+                    confirmButtonText: 'Sí, eliminar',
+                    cancelButtonText: 'Cancelar',
+                    background: 'rgba(15, 23, 42, 0.9)'
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        tempSectores.splice(index, 1);
+                        if (tempSectores.length === 0) {
+                            tempSectores.push({
+                                name: "Sector Temporal",
+                                color: "#3b82f6",
+                                polygon: [
+                                    [usmSanJoaquin[0] + 0.0004, usmSanJoaquin[1]],
+                                    [usmSanJoaquin[0] - 0.0004, usmSanJoaquin[1] + 0.0004],
+                                    [usmSanJoaquin[0] - 0.0004, usmSanJoaquin[1] - 0.0004]
+                                ]
+                            });
+                        }
+                        refreshSectorSelect(0);
+                    }
+                });
+            }
+        });
+    }
+
+    const btnSaveAll = document.getElementById('btn-editor-save-all');
+    if (btnSaveAll) {
+        btnSaveAll.addEventListener('click', () => {
+            Swal.fire({
+                title: 'Guardando sectores...',
+                text: 'Sincronizando con Firestore',
+                allowOutsideClick: false,
+                didOpen: () => { Swal.showLoading(); }
+            });
+
+            // Convertir de nuevo todo a objetos JS planos limpios por si Leaflet o la manipulación 
+            // agregó referencias circulares o funciones que Firestore rechaza
+            const cleanSectores = tempSectores.map(sec => ({
+                name: sec.name,
+                color: sec.color,
+                polygon: sec.polygon.map(coord => [coord[0], coord[1]])
+            }));
+
+            db.collection("config").doc("map_sectors").set({
+                sectores: cleanSectores
+            }).then(() => {
+                sectores = JSON.parse(JSON.stringify(cleanSectores));
+                updateDetectedSector();
+                Swal.fire('Guardado', 'Los sectores del mapa se han actualizado correctamente. Recargando la aplicación...', 'success').then(() => {
+                    location.reload(); // Recargar la página para asegurar refresco de todos los componentes y mapas
+                });
+            }).catch(err => {
+                Swal.fire('Error', 'No se pudo guardar: ' + err.message, 'error');
+            });
+        });
     }
 });
 
@@ -764,6 +1055,7 @@ btnEnviar.addEventListener('click', async () => {
             fotoUrl: urlDescarga,
             latitud: currentLat,
             longitud: currentLng,
+            sector: getSectorFromCoords(currentLat, currentLng),
             autor: activeUser,
             autorNombre: activeUserName,
             prioridad: 1
@@ -951,7 +1243,9 @@ function renderFilteredReports() {
             }).addTo(globalMap);
             
             const priority = reporte.prioridad !== undefined ? reporte.prioridad : 1;
+            const sectorName = reporte.sector || getSectorFromCoords(reporte.latitud, reporte.longitud) || 'Patios y Áreas Verdes';
             let popupContent = `<h3>${reporte.categoria}</h3>
+                                <div style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 5px; font-weight: 600;">📍 Sector: ${sectorName}</div>
                                 <p>${reporte.texto}</p>
                                 <div style="margin-top: 5px; font-size: 0.85rem; color: #a5b4fc; font-weight: 600;">
                                     🤖 Prioridad IA: ${priority}/5
@@ -980,7 +1274,8 @@ function renderFilteredReports() {
             tarjeta.style.boxShadow = "0 0 15px rgba(239, 68, 68, 0.2)";
         }
 
-        let ubicacionTexto = reporte.latitud ? "📌 Ubicación Adjunta" : "📍 Sin ubicación";
+        const sectorName = reporte.sector || getSectorFromCoords(reporte.latitud, reporte.longitud) || 'Patios y Áreas Verdes';
+        let ubicacionTexto = reporte.latitud ? `📍 ${sectorName}` : "📍 Sin ubicación";
         const displayName = reporte.autorNombre || reporte.autor || 'Anónimo';
         let autorHtml = `<div style="color: #64748b; font-size: 0.8em; margin-bottom: 5px;">Reportado por: ${displayName}</div>`;
         let imgHtml = reporte.fotoUrl && reporte.fotoUrl.startsWith("http") ? `<img src="${reporte.fotoUrl}" class="report-img" alt="Foto del reporte">` : '';
@@ -2172,11 +2467,14 @@ function loadUserProfile() {
                                          else if (priority === 0) priorityText = '🗑️ Descartado';
                                          else priorityText = '☕ Muy Baja';
 
+                                         const ownSector = rData.sector || (rData.latitud ? getSectorFromCoords(rData.latitud, rData.longitud) : 'Patios y Áreas Verdes');
+
                                          card.innerHTML = `
                                              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem; flex-wrap: wrap; gap: 4px;">
                                                  <strong style="color: white; font-size: 0.95rem;">${rData.categoria} <span style="font-size: 0.75rem; font-weight: 500; color: rgba(255,255,255,0.4); margin-left: 6px;">(IA: ${priorityText})</span></strong>
                                                  <small style="color: rgba(255,255,255,0.4); font-size: 0.75rem;">${dateStr}</small>
                                              </div>
+                                             <div style="color: var(--text-secondary); font-size: 0.75rem; margin-bottom: 8px; font-weight: 600;">📍 Sector: ${ownSector}</div>
                                              <p style="color: #cbd5e1; font-size: 0.85rem; margin: 0 0 0.75rem 0; line-height: 1.4;">${rData.texto}</p>
                                              <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
                                                  <div style="display: flex; gap: 0.75rem; font-size: 0.75rem; color: var(--text-secondary);">
@@ -2528,12 +2826,229 @@ if (btnBackAiRules) {
     });
 }
 
+// --- FUNCIONES DEL EDITOR DE SECTORES ---
+function promptForSectorEditing() {
+    Swal.fire({
+        title: 'Acceso Restringido',
+        text: 'Ingrese la contraseña para configurar los sectores del mapa:',
+        input: 'password',
+        inputAttributes: {
+            autocapitalize: 'off',
+            autocorrect: 'off'
+        },
+        showCancelButton: true,
+        confirmButtonText: 'Entrar',
+        cancelButtonText: 'Cancelar',
+        confirmButtonColor: '#3b82f6',
+        background: 'rgba(15, 23, 42, 0.9)'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            if (result.value === '1234') {
+                navigateTo('page-edit-map-sectors');
+            } else {
+                Swal.fire({
+                    title: 'Acceso Denegado',
+                    text: 'Contraseña incorrecta.',
+                    icon: 'error',
+                    confirmButtonColor: '#3b82f6',
+                    background: 'rgba(15, 23, 42, 0.9)'
+                });
+            }
+        }
+    });
+}
+
+function setupEditorMap() {
+    if (editorMap) return;
+    editorMap = L.map('editor-map', mapOptions).setView(usmSanJoaquin, 17);
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+        attribution: '© OpenStreetMap'
+    }).addTo(editorMap);
+
+    // Dibujar polígono del campus como referencia
+    L.polygon(campusCoordinates, {
+        color: '#3b82f6',
+        fillColor: '#3b82f6',
+        fillOpacity: 0.02,
+        weight: 2,
+        dashArray: '5, 8',
+        interactive: false
+    }).addTo(editorMap);
+}
+
+function loadSectorsInEditorList() {
+    tempSectores = JSON.parse(JSON.stringify(sectores));
+    refreshSectorSelect(0);
+}
+
+function refreshSectorSelect(selectedIndex) {
+    const select = document.getElementById('editor-sector-select');
+    if (!select) return;
+    select.innerHTML = "";
+    tempSectores.forEach((sec, idx) => {
+        const opt = document.createElement('option');
+        opt.value = idx;
+        opt.textContent = sec.name;
+        if (idx === selectedIndex) {
+            opt.selected = true;
+        }
+        select.appendChild(opt);
+    });
+    loadSectorInEditor(selectedIndex);
+}
+
+function loadSectorInEditor(index) {
+    if (!editorMap) setupEditorMap();
+
+    // Limpiar capas previas
+    if (editorPolygon) {
+        editorMap.removeLayer(editorPolygon);
+        editorPolygon = null;
+    }
+    editorMarkers.forEach(m => editorMap.removeLayer(m));
+    editorMarkers = [];
+
+    editorBackgroundPolygons.forEach(p => editorMap.removeLayer(p));
+    editorBackgroundPolygons = [];
+
+    if (tempSectores.length === 0 || index < 0 || index >= tempSectores.length) {
+        return;
+    }
+
+    const currentSector = tempSectores[index];
+
+    // Cargar inputs
+    const nameInput = document.getElementById('editor-sector-name');
+    const colorInput = document.getElementById('editor-sector-color');
+    const colorHexInput = document.getElementById('editor-sector-color-hex');
+
+    if (nameInput) nameInput.value = currentSector.name;
+    if (colorInput) colorInput.value = currentSector.color || '#3b82f6';
+    if (colorHexInput) colorHexInput.value = currentSector.color || '#3b82f6';
+
+    // Dibujar otros sectores de fondo (estáticos)
+    tempSectores.forEach((sec, idx) => {
+        if (idx !== index) {
+            const bgPoly = L.polygon(sec.polygon, {
+                color: sec.color || '#94a3b8',
+                fillColor: sec.color || '#94a3b8',
+                fillOpacity: 0.05,
+                weight: 1.5,
+                dashArray: '3, 6',
+                interactive: false
+            }).addTo(editorMap);
+            editorBackgroundPolygons.push(bgPoly);
+        }
+    });
+
+    // Dibujar el polígono activo para edición
+    editorPolygon = L.polygon(currentSector.polygon, {
+        color: currentSector.color || '#3b82f6',
+        fillColor: currentSector.color || '#3b82f6',
+        fillOpacity: 0.35,
+        weight: 3
+    }).addTo(editorMap);
+
+    // Centrar en el sector si tiene coordenadas
+    if (currentSector.polygon.length > 0) {
+        try {
+            editorMap.fitBounds(editorPolygon.getBounds(), { padding: [30, 30] });
+        } catch (e) {
+            editorMap.setView(usmSanJoaquin, 17);
+        }
+    }
+
+    // Dibujar marcadores arrastrables (Handles) en cada vértice (esquina) del sector
+    currentSector.polygon.forEach((coords, idx) => {
+        const handleIcon = L.divIcon({
+            className: 'custom-vertex-handle',
+            html: `<div style="width: 14px; height: 14px; background-color: #fbbf24; border: 2px solid #ffffff; border-radius: 50%; box-shadow: 0 2px 6px rgba(0,0,0,0.6); cursor: grab;"></div>`,
+            iconSize: [14, 14],
+            iconAnchor: [7, 7]
+        });
+
+        const marker = L.marker(coords, {
+            icon: handleIcon,
+            draggable: true
+        }).addTo(editorMap);
+
+        // Última posición válida (sin superposición)
+        marker._lastValidLatLng = L.latLng(coords[0], coords[1]);
+
+        // Durante el arrastre: bloquear en tiempo real si entra en otro sector
+        marker.on('drag', (e) => {
+            const newPos = marker.getLatLng();
+            
+            // Comprobar si la nueva posición cae dentro de cualquier otro sector
+            let blocked = false;
+            for (let i = 0; i < tempSectores.length; i++) {
+                if (i === index) continue;
+                if (isPointInPolygon(newPos.lat, newPos.lng, tempSectores[i].polygon)) {
+                    blocked = true;
+                    break;
+                }
+            }
+
+            // También comprobar si algún vértice vecino quedaría dentro del polígono editado
+            if (!blocked) {
+                const testPolygon = currentSector.polygon.map((c, ci) => ci === idx ? [newPos.lat, newPos.lng] : c);
+                for (let i = 0; i < tempSectores.length; i++) {
+                    if (i === index) continue;
+                    for (const pt of tempSectores[i].polygon) {
+                        if (isPointInPolygon(pt[0], pt[1], testPolygon)) {
+                            blocked = true;
+                            break;
+                        }
+                    }
+                    if (blocked) break;
+                }
+            }
+
+            if (blocked) {
+                // Devolver el marcador a la última posición válida instantáneamente
+                marker.setLatLng(marker._lastValidLatLng);
+            } else {
+                // Posición válida: actualizar el polígono y guardar como última válida
+                marker._lastValidLatLng = L.latLng(newPos.lat, newPos.lng);
+                currentSector.polygon[idx] = [newPos.lat, newPos.lng];
+                editorPolygon.setLatLngs(currentSector.polygon);
+            }
+        });
+
+        // Al soltar, asegurarse de que la coordenada final es la última válida
+        marker.on('dragend', (e) => {
+            const finalPos = marker._lastValidLatLng;
+            marker.setLatLng(finalPos);
+            currentSector.polygon[idx] = [finalPos.lat, finalPos.lng];
+            editorPolygon.setLatLngs(currentSector.polygon);
+        });
+
+        editorMarkers.push(marker);
+    });
+}
+
+function updateActiveSectorColor(newColor) {
+    const select = document.getElementById('editor-sector-select');
+    if (!select) return;
+    const index = parseInt(select.value, 10);
+    if (index >= 0 && index < tempSectores.length) {
+        tempSectores[index].color = newColor;
+        if (editorPolygon) {
+            editorPolygon.setStyle({
+                color: newColor,
+                fillColor: newColor
+            });
+        }
+    }
+}
+
 // --- INICIALIZACIÓN DE LA APP ---
 window.addEventListener('DOMContentLoaded', () => {
-    // Redirigir a Home (Dashboard) si ya hay sesión iniciada, si no, mantener en Welcome
+    // Redirigir a Home si hay sesión iniciada, si no redirigir a Login Custom inmediatamente
     if (localStorage.getItem('custom-user-email')) {
         navigateTo('page-home');
     } else {
-        navigateTo('page-welcome');
+        navigateTo('page-login-custom');
+        setLoginMode('login');
     }
 });

@@ -75,7 +75,7 @@ btnLogout.addEventListener('click', () => {
 /* DESACTIVADO TEMPORALMENTE PARA PRUEBAS DE FOTO
 auth.onAuthStateChanged(user => {
     if (user) {
-        if (user.email.endsWith('@usm.cl') || user.email.endsWith('@sansano.usm.cl')) {
+        if (user.email.endsWith('@usm.cl') || user.email.endsWith('@sansano.usm.cl') || user.email.endsWith('@sansano.cl')) {
             currentUserEmail = user.email;
             userEmailText.textContent = `Conectado como: ${user.email}`;
             loginSection.style.display = 'none';
@@ -85,7 +85,7 @@ auth.onAuthStateChanged(user => {
             setTimeout(() => { formMap.invalidateSize(); }, 300);
         } else {
             auth.signOut();
-            Swal.fire('Acceso Denegado', 'Debes usar un correo institucional de la USM (@usm.cl o @sansano.usm.cl).', 'error');
+            Swal.fire('Acceso Denegado', 'Debes usar un correo institucional de la USM (@usm.cl, @sansano.usm.cl o @sansano.cl).', 'error');
         }
     } else {
         currentUserEmail = null;
@@ -253,6 +253,7 @@ const pageLoginCustom = document.getElementById('page-login-custom');
 const pageCredentialsList = document.getElementById('page-credentials-list');
 const pageProfile = document.getElementById('page-profile');
 const pageEditProfile = document.getElementById('page-edit-profile');
+const pageAiRules = document.getElementById('page-ai-rules');
 
 const btnGotoReport = document.getElementById('btn-goto-report');
 const btnGotoList = document.getElementById('btn-goto-list');
@@ -300,7 +301,7 @@ function navigateTo(pageId) {
 
     // Existing navigation logic (show/hide pages) continues as before
     // Hide all pages
-    [pageWelcome, pageHome, pageReportForm, pageReportsList, pageLoginCustom, pageCredentialsList, pageProfile, pageEditProfile].forEach(page => {
+    [pageWelcome, pageHome, pageReportForm, pageReportsList, pageLoginCustom, pageCredentialsList, pageProfile, pageEditProfile, pageAiRules].forEach(page => {
         if (page) {
             page.style.display = 'none';
             page.classList.remove('active');
@@ -328,6 +329,18 @@ function navigateTo(pageId) {
             }
         } else if (pageId === 'page-report-form' && typeof formMap !== 'undefined') {
             setTimeout(() => formMap.invalidateSize(), 100);
+        } else if (pageId === 'page-ai-rules') {
+            loadAiRules();
+        } else if (pageId === 'page-home') {
+            const userEmail = localStorage.getItem('custom-user-email');
+            const btnGotoList = document.getElementById('btn-goto-list');
+            if (btnGotoList) {
+                if (userEmail) {
+                    btnGotoList.style.display = 'flex';
+                } else {
+                    btnGotoList.style.display = 'none';
+                }
+            }
         }
     }
 }
@@ -388,17 +401,29 @@ if (btnWelcomeStaff) {
                 if (result.value === '6767') section = 'Seguridad';
                 else if (result.value === '6969') section = 'Salud';
                 else if (result.value === '1313') section = 'Equidad de Género';
+                else if (result.value === '1234') section = 'AI-Moderation';
 
                 if (section) {
                     currentStaffCategory = section;
-                    Swal.fire({
-                        title: 'Acceso Concedido',
-                        text: 'Has ingresado como Encargado de ' + section,
-                        icon: 'success',
-                        confirmButtonColor: '#3b82f6',
-                        background: 'rgba(15, 23, 42, 0.9)'
-                    }).then(() => {
-                        navigateTo('page-reports-list');
+                    if (section === 'AI-Moderation') {
+                        Swal.fire({
+                            title: 'Acceso Concedido',
+                            text: 'Panel de Administrador de Reglas de IA',
+                            icon: 'success',
+                            confirmButtonColor: '#3b82f6',
+                            background: 'rgba(15, 23, 42, 0.9)'
+                        }).then(() => {
+                            navigateTo('page-ai-rules');
+                        });
+                    } else {
+                        Swal.fire({
+                            title: 'Acceso Concedido',
+                            text: 'Has ingresado como Encargado de ' + section,
+                            icon: 'success',
+                            confirmButtonColor: '#3b82f6',
+                            background: 'rgba(15, 23, 42, 0.9)'
+                        }).then(() => {
+                            navigateTo('page-reports-list');
                         // Show ALL category buttons but pre-select staff's department
                         document.querySelectorAll('.filter-btn[data-filter-type="category"]').forEach(b => {
                             b.style.display = 'inline-block';
@@ -414,8 +439,9 @@ if (btnWelcomeStaff) {
                         activeCategoryFilter = section;
                         renderFilteredReports();
                     });
-                } else {
-                    Swal.fire({
+                }
+            } else {
+                Swal.fire({
                         title: 'Acceso Denegado',
                         text: 'Contraseña incorrecta.',
                         icon: 'error',
@@ -548,6 +574,139 @@ botonesCategoria.forEach(boton => {
     });
 });
 
+function parsePriority(priorityVal) {
+    if (priorityVal === undefined || priorityVal === null) return 1;
+    if (typeof priorityVal === 'number') {
+        if (priorityVal >= 0 && priorityVal <= 5) return Math.round(priorityVal);
+        return 1;
+    }
+    const str = String(priorityVal).toLowerCase().trim();
+    const digitMatch = str.match(/[0-5]/);
+    if (digitMatch) {
+        return parseInt(digitMatch[0], 10);
+    }
+    if (str.includes('critica') || str.includes('crítica') || str.includes('critico') || str.includes('crítico') || str.includes('urgente') || str.includes('maxima') || str.includes('máxima')) {
+        return 5;
+    }
+    if (str.includes('alta') || str.includes('alto')) {
+        return 4;
+    }
+    if (str.includes('media') || str.includes('medio') || str.includes('moderado')) {
+        return 3;
+    }
+    if (str.includes('baja') || str.includes('bajo')) {
+        if (str.includes('muy')) return 1;
+        return 2;
+    }
+    if (str.includes('eliminar') || str.includes('descartar') || str.includes('descartado') || str.includes('nula') || str.includes('nulo')) {
+        return 0;
+    }
+    return 1;
+}
+
+async function analyzeReportWithAI(commentText) {
+    try {
+        // Cargar las reglas configuradas por el administrador en Firestore
+        let rulesText = `1. Clasifica la prioridad del incidente de 0 a 5 (0 prioridad descartada/nula, 1 muy baja, 5 prioridad crítica). Usa 0 si el reporte no es apropiado o de interés para la comunidad y debe ser descartado/eliminado.\n2. Si el reporte contiene venta de artículos, comida, productos, ofertas comerciales, servicios de pago o publicidad de negocios, indícalo (isSale: true) para que sea eliminado.`;
+        try {
+            const rulesDoc = await db.collection("config").doc("ia_rules").get();
+            if (rulesDoc.exists && rulesDoc.data().rules) {
+                rulesText = rulesDoc.data().rules;
+            }
+        } catch (dbError) {
+            console.warn("No se pudieron cargar las reglas de IA desde Firestore. Usando las por defecto.", dbError);
+        }
+
+        const prompt = `Analiza el siguiente reporte de incidente en un campus universitario: "${commentText}".
+
+Debes evaluar el reporte bajo estas condiciones y reglas específicas definidas por el administrador:
+${rulesText}
+
+Responde estrictamente con un objeto JSON en este formato (sin markdown, bloques de código ni explicaciones adicionales):
+{
+  "priority": <número del 0 al 5 según la clasificación de prioridad>,
+  "isSale": <true si se cumple alguna de las reglas para que el reporte sea eliminado/rechazado (ej. por ser venta), de lo contrario false>
+}`;
+
+        let textResult = "";
+        
+        // 1. Intentar usar Puter AI (Altamente confiable, estable y libre de keys)
+        if (typeof puter !== 'undefined' && puter.ai) {
+            try {
+                console.log("Conectando con Puter AI...");
+                const response = await puter.ai.chat(prompt, { model: 'openai/gpt-4o-mini' });
+                textResult = response.toString();
+                console.log("Respuesta recibida exitosamente desde Puter AI.");
+            } catch (puterError) {
+                console.warn("Fallo al conectar con Puter AI, intentando fallback de Pollinations...", puterError);
+            }
+        }
+        
+        // 2. Fallback: Usar Pollinations AI si Puter no está disponible o falla
+        if (!textResult) {
+            console.log("Conectando con Pollinations AI (Fallback)...");
+            const models = ['openai', 'mistral', 'llama', 'gemini'];
+            let success = false;
+            
+            for (const model of models) {
+                try {
+                    const response = await fetch(`https://text.pollinations.ai/${encodeURIComponent(prompt)}?model=${model}&json=true`);
+                    if (response.ok) {
+                        textResult = await response.text();
+                        if (textResult && textResult.trim().length > 0 && !textResult.includes("Queue full") && !textResult.includes("error")) {
+                            success = true;
+                            console.log(`Fallback exitoso usando Pollinations con modelo: ${model}`);
+                            break;
+                        }
+                    }
+                } catch (fetchErr) {
+                    console.warn(`Error en fallback de Pollinations con modelo ${model}:`, fetchErr);
+                }
+            }
+            
+            if (!success) {
+                throw new Error("No se pudo obtener una respuesta válida de ninguna de las APIs de IA gratuitas.");
+            }
+        }
+        
+        let priorityVal = 1;
+        let isSaleVal = false;
+        
+        try {
+            let cleanText = textResult.trim();
+            // Limpiar marcadores de bloques de código de markdown si existieran
+            cleanText = cleanText.replace(/```json/g, '').replace(/```/g, '').trim();
+            
+            const jsonMatch = cleanText.match(/\{[\s\S]*\}/);
+            if (jsonMatch) {
+                cleanText = jsonMatch[0];
+            }
+            
+            const result = JSON.parse(cleanText);
+            priorityVal = result.priority;
+            isSaleVal = result.isSale;
+        } catch (parseError) {
+            console.warn("Fallo al parsear JSON de la IA, aplicando fallback de regex.", parseError);
+            const priorityMatch = textResult.match(/"priority"\s*:\s*(?:"([^"]+)"|(\d+))/i) || textResult.match(/priority\s*[:=]\s*(\w+)/i);
+            if (priorityMatch) {
+                priorityVal = priorityMatch[1] || priorityMatch[2];
+            }
+            const isSaleMatch = textResult.match(/"isSale"\s*:\s*(true|false)/i) || textResult.match(/isSale\s*[:=]\s*(true|false)/i);
+            if (isSaleMatch) {
+                isSaleVal = isSaleMatch[1].toLowerCase() === 'true';
+            }
+        }
+        
+        return {
+            priority: parsePriority(priorityVal),
+            isSale: !!isSaleVal
+        };
+    } catch (error) {
+        console.error("Error crítico en análisis de IA:", error);
+        return { priority: 1, isSale: false };
+    }
+}
+
 btnEnviar.addEventListener('click', async () => {
     // Validar que la ubicación esté estrictamente dentro del polígono del campus (zona azul)
     if (!isPointInPolygon(currentLat, currentLng, campusCoordinates)) {
@@ -590,8 +749,8 @@ btnEnviar.addEventListener('click', async () => {
         const activeUser = localStorage.getItem('custom-user-email') || currentUserEmail;
         const activeUserName = localStorage.getItem('custom-user-name') || activeUser.split('@')[0];
 
-        // 3. Guardar en la colección "reportes" de Firestore
-        await db.collection("reportes").add({
+        // 3. Guardar en la colección "reportes" de Firestore (con prioridad inicial 1)
+        const reportRef = await db.collection("reportes").add({
             texto: comentario,
             categoria: categoriaSeleccionada,
             fecha: new Date(),
@@ -599,18 +758,51 @@ btnEnviar.addEventListener('click', async () => {
             latitud: currentLat,
             longitud: currentLng,
             autor: activeUser,
-            autorNombre: activeUserName
+            autorNombre: activeUserName,
+            prioridad: 1
         });
         
+        // --- ANÁLISIS DE IA AUTOMÁTICO Y GRATUITO ---
         Swal.fire({
-            title: '¡Reporte Enviado!',
-            text: 'El aviso y la foto ya están en el sistema.',
-            icon: 'success',
-            confirmButtonColor: '#3b82f6',
-            background: 'rgba(15, 23, 42, 0.9)'
-        }).then(() => {
-            navigateTo('page-reports-list');
+            title: 'Analizando con IA...',
+            text: 'La Inteligencia Artificial está evaluando la prioridad y contenido del reporte...',
+            allowOutsideClick: false,
+            didOpen: () => { Swal.showLoading() }
         });
+        
+        const aiResult = await analyzeReportWithAI(comentario);
+
+        if (aiResult.isSale || aiResult.priority === 0) {
+            // Eliminar de Firestore
+            await db.collection("reportes").doc(reportRef.id).delete();
+
+            Swal.fire({
+                title: 'Eliminado por la IA',
+                text: aiResult.isSale 
+                    ? 'El reporte ha sido eliminado automáticamente por la IA de SafeUSM porque detectó que se trata de un anuncio de venta comercial, las cuales no están permitidas.'
+                    : 'El reporte ha sido eliminado automáticamente por la IA de SafeUSM porque se clasificó con prioridad/clasificación 0.',
+                icon: 'warning',
+                confirmButtonColor: '#ef4444',
+                background: 'rgba(15, 23, 42, 0.9)'
+            }).then(() => {
+                navigateTo('page-reports-list');
+            });
+        } else {
+            // Actualizar la prioridad asignada
+            await db.collection("reportes").doc(reportRef.id).update({
+                prioridad: aiResult.priority
+            });
+
+            Swal.fire({
+                title: '¡Reporte Enviado!',
+                text: `El aviso ya está en el sistema. Prioridad asignada por la IA: ${aiResult.priority}/5.`,
+                icon: 'success',
+                confirmButtonColor: '#3b82f6',
+                background: 'rgba(15, 23, 42, 0.9)'
+            }).then(() => {
+                navigateTo('page-reports-list');
+            });
+        }
         
         // Limpiamos los campos
         inputComentario.value = "";
@@ -751,8 +943,12 @@ function renderFilteredReports() {
                 className: className
             }).addTo(globalMap);
             
+            const priority = reporte.prioridad !== undefined ? reporte.prioridad : 1;
             let popupContent = `<h3>${reporte.categoria}</h3>
                                 <p>${reporte.texto}</p>
+                                <div style="margin-top: 5px; font-size: 0.85rem; color: #a5b4fc; font-weight: 600;">
+                                    🤖 Prioridad IA: ${priority}/5
+                                </div>
                                 <div style="margin-top: 5px; font-weight: bold; color: ${confirmations >= 5 ? '#ef4444' : '#60a5fa'}">
                                     🔥 ${confirmations} Confirmaciones
                                 </div>`;
@@ -782,11 +978,30 @@ function renderFilteredReports() {
         let autorHtml = `<div style="color: #64748b; font-size: 0.8em; margin-bottom: 5px;">Reportado por: ${displayName}</div>`;
         let imgHtml = reporte.fotoUrl && reporte.fotoUrl.startsWith("http") ? `<img src="${reporte.fotoUrl}" class="report-img" alt="Foto del reporte">` : '';
 
+        const priority = reporte.prioridad !== undefined ? reporte.prioridad : 1;
+        let priorityBadge = '';
+        if (priority === 5) {
+            priorityBadge = `<span style="background: rgba(239, 68, 68, 0.15); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.3); font-size: 0.65em; padding: 2px 6px; border-radius: 6px; font-weight: 700; display: inline-flex; align-items: center; gap: 4px;">🚨 Prioridad: 5 (Crítica)</span>`;
+        } else if (priority === 4) {
+            priorityBadge = `<span style="background: rgba(249, 115, 22, 0.15); color: #fb923c; border: 1px solid rgba(249, 115, 22, 0.3); font-size: 0.65em; padding: 2px 6px; border-radius: 6px; font-weight: 700; display: inline-flex; align-items: center; gap: 4px;">⚠️ Prioridad: 4 (Alta)</span>`;
+        } else if (priority === 3) {
+            priorityBadge = `<span style="background: rgba(234, 179, 8, 0.15); color: #facc15; border: 1px solid rgba(234, 179, 8, 0.3); font-size: 0.65em; padding: 2px 6px; border-radius: 6px; font-weight: 700; display: inline-flex; align-items: center; gap: 4px;">🔔 Prioridad: 3 (Media)</span>`;
+        } else if (priority === 2) {
+            priorityBadge = `<span style="background: rgba(59, 130, 246, 0.15); color: #60a5fa; border: 1px solid rgba(59, 130, 246, 0.3); font-size: 0.65em; padding: 2px 6px; border-radius: 6px; font-weight: 700; display: inline-flex; align-items: center; gap: 4px;">ℹ️ Prioridad: 2 (Baja)</span>`;
+        } else if (priority === 1) {
+            priorityBadge = `<span style="background: rgba(100, 116, 139, 0.15); color: #94a3b8; border: 1px solid rgba(100, 116, 139, 0.3); font-size: 0.65em; padding: 2px 6px; border-radius: 6px; font-weight: 700; display: inline-flex; align-items: center; gap: 4px;">☕ Prioridad: 1 (Muy Baja)</span>`;
+        } else if (priority === 0) {
+            priorityBadge = `<span style="background: rgba(244, 63, 94, 0.15); color: #fb7185; border: 1px solid rgba(244, 63, 94, 0.3); font-size: 0.65em; padding: 2px 6px; border-radius: 6px; font-weight: 700; display: inline-flex; align-items: center; gap: 4px;">🗑️ Prioridad: 0 (Descartado)</span>`;
+        } else {
+            priorityBadge = `<span style="background: rgba(100, 116, 139, 0.15); color: #94a3b8; border: 1px solid rgba(100, 116, 139, 0.3); font-size: 0.65em; padding: 2px 6px; border-radius: 6px; font-weight: 700; display: inline-flex; align-items: center; gap: 4px;">☕ Prioridad: 1 (Muy Baja)</span>`;
+        }
+
         tarjeta.innerHTML = `
             <div style="display: flex; justify-content: space-between; align-items: flex-start;">
-                <h3 style="color: white; margin-bottom: 5px; display: inline-flex; align-items: center; gap: 8px;">
+                <h3 style="color: white; margin-bottom: 5px; display: inline-flex; align-items: center; gap: 6px; flex-wrap: wrap;">
                     ${reporte.categoria}
                     ${confirmations >= 5 ? '<span style="background: var(--danger); color: white; font-size: 0.6em; padding: 2px 6px; border-radius: 4px; font-weight: 700; text-transform: uppercase;">⚠️ CRÍTICO</span>' : ''}
+                    ${priorityBadge}
                 </h3>
                 <small style="color: ${getColor(reporte.categoria)}; font-size: 0.8em; border: 1px solid ${getColor(reporte.categoria)}; padding: 2px 6px; border-radius: 10px;">${ubicacionTexto}</small>
             </div>
@@ -1469,11 +1684,11 @@ if (btnSubmitLogin) {
         }
 
         // Validación de dominio institucional USM
-        const emailRegex = /^[a-zA-Z0-9._%+-]+@(usm\.cl|sansano\.usm\.cl)$/i;
+        const emailRegex = /^[a-zA-Z0-9._%+-]+@(usm\.cl|sansano\.usm\.cl|sansano\.cl)$/i;
         if (!emailRegex.test(email)) {
             Swal.fire({
                 title: 'Correo Inválido',
-                text: 'Debes utilizar un correo institucional de la USM (@usm.cl o @sansano.usm.cl).',
+                text: 'Debes utilizar un correo institucional de la USM (@usm.cl, @sansano.usm.cl o @sansano.cl).',
                 icon: 'error',
                 confirmButtonColor: '#3b82f6',
                 background: 'rgba(15, 23, 42, 0.9)'
@@ -1714,8 +1929,8 @@ if (credentialsContainer) {
 
           // Agregar eventos de mostrar mensajes del usuario
           document.querySelectorAll('.show-messages-btn').forEach(btn => {
-              btn.addEventListener('click', async (e) => {
-                  const email = e.target.getAttribute('data-email');
+              btn.addEventListener('click', async () => {
+                  const email = btn.getAttribute('data-email');
                   
                   Swal.fire({
                       title: 'Cargando mensajes...',
@@ -1753,9 +1968,17 @@ if (credentialsContainer) {
                       docs.forEach(rData => {
                           const rDate = rData.fecha ? new Date(rData.fecha.seconds * 1000).toLocaleString('es-ES') : 'Reciente';
                           messagesHTML += `
-                              <div style="background: rgba(255,255,255,0.05); padding: 10px; border-radius: 8px; border-left: 3px solid var(--accent-color);">
-                                  <div style="font-size: 0.8rem; color: rgba(255,255,255,0.4); margin-bottom: 4px;">📅 ${rDate} - 🏷️ ${rData.categoria}</div>
-                                  <div style="color: #ffffff; font-size: 0.95rem; line-height: 1.4;">${rData.texto}</div>
+                              <div class="user-msg-item" style="background: rgba(255,255,255,0.05); padding: 10px; border-radius: 8px; border-left: 3px solid var(--accent-color); display: flex; justify-content: space-between; align-items: center; gap: 10px;">
+                                  <div style="flex-grow: 1;">
+                                      <div style="font-size: 0.8rem; color: rgba(255,255,255,0.4); margin-bottom: 4px;">📅 ${rDate} - 🏷️ ${rData.categoria}</div>
+                                      <div style="color: #ffffff; font-size: 0.95rem; line-height: 1.4;">${rData.texto}</div>
+                                  </div>
+                                  <button class="delete-user-msg-btn" data-id="${rData.id}" style="background: transparent; border: 1px solid var(--danger); border-radius: 6px; padding: 6px; color: var(--danger); cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0;" title="Eliminar reporte">
+                                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                          <polyline points="3 6 5 6 21 6"></polyline>
+                                          <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"></path>
+                                      </svg>
+                                  </button>
                               </div>
                           `;
                       });
@@ -1767,7 +1990,50 @@ if (credentialsContainer) {
                           confirmButtonColor: '#3b82f6',
                           confirmButtonText: 'Cerrar',
                           background: 'rgba(15, 23, 42, 0.9)',
-                          width: '500px'
+                          width: '500px',
+                          didOpen: () => {
+                              const modal = Swal.getHtmlContainer();
+                              const deleteButtons = modal.querySelectorAll('.delete-user-msg-btn');
+                              deleteButtons.forEach(delBtn => {
+                                  delBtn.addEventListener('click', () => {
+                                      const reportId = delBtn.getAttribute('data-id');
+                                      
+                                      Swal.fire({
+                                          title: '¿Eliminar este reporte?',
+                                          text: 'Esta acción no se puede deshacer.',
+                                          icon: 'warning',
+                                          showCancelButton: true,
+                                          confirmButtonColor: '#ef4444',
+                                          cancelButtonColor: '#3b82f6',
+                                          confirmButtonText: 'Sí, eliminar',
+                                          cancelButtonText: 'Cancelar',
+                                          background: 'rgba(15, 23, 42, 0.9)'
+                                      }).then(async (result) => {
+                                          if (result.isConfirmed) {
+                                              try {
+                                                  await db.collection("reportes").doc(reportId).delete();
+                                                  
+                                                  Swal.fire({
+                                                      title: 'Eliminado',
+                                                      text: 'El reporte ha sido eliminado.',
+                                                      icon: 'success',
+                                                      background: 'rgba(15, 23, 42, 0.9)',
+                                                      timer: 1500,
+                                                      showConfirmButton: false
+                                                  }).then(() => {
+                                                      const originalBtn = document.querySelector(`.show-messages-btn[data-email="${email}"]`);
+                                                      if (originalBtn) {
+                                                          originalBtn.click();
+                                                      }
+                                                  });
+                                              } catch (error) {
+                                                  Swal.fire('Error', 'No se pudo eliminar: ' + error.message, 'error');
+                                              }
+                                          }
+                                      });
+                                  });
+                              });
+                          }
                       });
 
                   } catch (error) {
@@ -1889,18 +2155,68 @@ function loadUserProfile() {
                                              ? rData.fecha.toDate().toLocaleString('es-ES', { dateStyle: 'short', timeStyle: 'short' }) 
                                              : 'Reciente';
                                          
+                                         const priority = rData.prioridad !== undefined ? rData.prioridad : 1;
+                                         let priorityText = '';
+                                         if (priority === 5) priorityText = '🚨 Crítica';
+                                         else if (priority === 4) priorityText = '⚠️ Alta';
+                                         else if (priority === 3) priorityText = '🔔 Media';
+                                         else if (priority === 2) priorityText = 'ℹ️ Baja';
+                                         else if (priority === 1) priorityText = '☕ Muy Baja';
+                                         else if (priority === 0) priorityText = '🗑️ Descartado';
+                                         else priorityText = '☕ Muy Baja';
+
                                          card.innerHTML = `
-                                             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
-                                                 <strong style="color: white; font-size: 0.95rem;">${rData.categoria}</strong>
+                                             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem; flex-wrap: wrap; gap: 4px;">
+                                                 <strong style="color: white; font-size: 0.95rem;">${rData.categoria} <span style="font-size: 0.75rem; font-weight: 500; color: rgba(255,255,255,0.4); margin-left: 6px;">(IA: ${priorityText})</span></strong>
                                                  <small style="color: rgba(255,255,255,0.4); font-size: 0.75rem;">${dateStr}</small>
                                              </div>
                                              <p style="color: #cbd5e1; font-size: 0.85rem; margin: 0 0 0.75rem 0; line-height: 1.4;">${rData.texto}</p>
-                                             <div style="display: flex; gap: 0.75rem; font-size: 0.75rem; color: var(--text-secondary);">
-                                                 <span>❤️ ${rData.likes || 0} Likes</span>
-                                                 <span>Confirmaciones (${rData.confirmations || 0})</span>
+                                             <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+                                                 <div style="display: flex; gap: 0.75rem; font-size: 0.75rem; color: var(--text-secondary);">
+                                                     <span>❤️ ${rData.likes || 0} Likes</span>
+                                                     <span>Confirmaciones (${rData.confirmations || 0})</span>
+                                                 </div>
+                                                 <button class="delete-own-report-btn" style="background: transparent; border: 1px solid var(--danger); border-radius: 6px; padding: 4px 8px; color: var(--danger); cursor: pointer; font-size: 0.75rem; display: flex; align-items: center; gap: 4px;">
+                                                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                                         <polyline points="3 6 5 6 21 6"></polyline>
+                                                         <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"></path>
+                                                     </svg>
+                                                     Eliminar
+                                                 </button>
                                              </div>
                                          `;
                                          myReportsContainer.appendChild(card);
+                                         
+                                         const deleteBtn = card.querySelector('.delete-own-report-btn');
+                                         if (deleteBtn) {
+                                             deleteBtn.addEventListener('click', () => {
+                                                 Swal.fire({
+                                                     title: '¿Eliminar tu reporte?',
+                                                     text: "Esta acción no se puede deshacer.",
+                                                     icon: 'warning',
+                                                     showCancelButton: true,
+                                                     confirmButtonColor: '#ef4444',
+                                                     cancelButtonColor: '#3b82f6',
+                                                     confirmButtonText: 'Sí, eliminar',
+                                                     cancelButtonText: 'Cancelar',
+                                                     background: 'rgba(15, 23, 42, 0.9)'
+                                                 }).then((result) => {
+                                                     if (result.isConfirmed) {
+                                                         db.collection("reportes").doc(rData.id).delete().then(() => {
+                                                             Swal.fire({
+                                                                 title: 'Eliminado',
+                                                                 text: 'Tu reporte ha sido eliminado correctamente.',
+                                                                 icon: 'success',
+                                                                 confirmButtonColor: '#3b82f6',
+                                                                 background: 'rgba(15, 23, 42, 0.9)'
+                                                             });
+                                                         }).catch(error => {
+                                                             Swal.fire('Error', 'No se pudo eliminar el reporte: ' + error.message, 'error');
+                                                         });
+                                                     }
+                                                 });
+                                             });
+                                         }
                                      });
                                  }, error => {
                                      console.error("Error al escuchar reportes propios:", error);
@@ -2133,6 +2449,76 @@ if (btnCustomLogout) {
 }
 if (btnProfileLogout) {
     btnProfileLogout.addEventListener('click', handleLogout);
+}
+
+// --- LÓGICA DE CONFIGURACIÓN DE REGLAS DE IA (PÁGINA 8) ---
+const textareaAiRules = document.getElementById('ai-custom-rules');
+const btnSaveAiRules = document.getElementById('btn-save-ai-rules');
+const btnBackAiRules = document.getElementById('btn-back-ai-rules');
+
+const DEFAULT_AI_RULES = `1. Clasifica la prioridad del incidente de 1 a 5 (1 prioridad muy baja, 5 prioridad crítica).
+2. Si el reporte contiene venta de artículos, comida, productos, ofertas comerciales, servicios de pago o publicidad de negocios, indícalo (isSale: true) para que sea eliminado.`;
+
+async function loadAiRules() {
+    if (!textareaAiRules) return;
+    
+    textareaAiRules.disabled = true;
+    textareaAiRules.value = "Cargando reglas...";
+    
+    try {
+        const doc = await db.collection("config").doc("ia_rules").get();
+        if (doc.exists && doc.data().rules) {
+            textareaAiRules.value = doc.data().rules;
+        } else {
+            textareaAiRules.value = DEFAULT_AI_RULES;
+        }
+    } catch (error) {
+        console.error("Error al cargar reglas de IA:", error);
+        textareaAiRules.value = DEFAULT_AI_RULES;
+    } finally {
+        textareaAiRules.disabled = false;
+    }
+}
+
+if (btnSaveAiRules) {
+    btnSaveAiRules.addEventListener('click', async () => {
+        const rules = textareaAiRules ? textareaAiRules.value.trim() : '';
+        if (!rules) {
+            Swal.fire('Error', 'Las reglas no pueden estar vacías.', 'warning');
+            return;
+        }
+        
+        btnSaveAiRules.disabled = true;
+        const originalText = btnSaveAiRules.innerHTML;
+        btnSaveAiRules.innerHTML = "<span>Guardando...</span>";
+        
+        try {
+            await db.collection("config").doc("ia_rules").set({
+                rules: rules,
+                ultimaActualizacion: new Date()
+            });
+            
+            Swal.fire({
+                title: 'Reglas Guardadas',
+                text: 'Las nuevas reglas de análisis de IA se han aplicado correctamente.',
+                icon: 'success',
+                confirmButtonColor: '#3b82f6',
+                background: 'rgba(15, 23, 42, 0.9)'
+            });
+        } catch (error) {
+            console.error("Error al guardar reglas de IA:", error);
+            Swal.fire('Error', 'No se pudieron guardar las reglas: ' + error.message, 'error');
+        } finally {
+            btnSaveAiRules.disabled = false;
+            btnSaveAiRules.innerHTML = originalText;
+        }
+    });
+}
+
+if (btnBackAiRules) {
+    btnBackAiRules.addEventListener('click', () => {
+        navigateTo('page-welcome');
+    });
 }
 
 // --- INICIALIZACIÓN DE LA APP ---

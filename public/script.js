@@ -376,6 +376,13 @@ function requestNotificationPermission() {
 // Call initialization functions after DOM loaded
 document.addEventListener('DOMContentLoaded', () => {
     requestNotificationPermission();
+    
+    // Solicitar inicio de sesión inmediatamente al cargar la página si no hay sesión activa
+    const savedCustomEmail = localStorage.getItem('custom-user-email');
+    if (!savedCustomEmail) {
+        navigateTo('page-login-custom');
+        setLoginMode('login');
+    }
 });
 
 // --- Welcome Staff Button ---

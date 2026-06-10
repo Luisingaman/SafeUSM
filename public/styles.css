@@ -105,6 +105,7 @@ body {
     margin-bottom: 0.5rem;
     background: linear-gradient(135deg, #fff 0%, #a5b4fc 100%);
     -webkit-background-clip: text;
+    background-clip: text;
     -webkit-text-fill-color: transparent;
     letter-spacing: -0.05em;
     text-align: center;
@@ -616,6 +617,7 @@ html[data-theme="light"] .title,
 html[data-theme="light"] .header-titles h2 {
     background: linear-gradient(to right, #0f294a, #2563eb);
     -webkit-background-clip: text;
+    background-clip: text;
     -webkit-text-fill-color: transparent;
 }
 html[data-theme="light"] .menu-card-btn {
@@ -1325,9 +1327,15 @@ html[data-theme="photophobia"] body {
 .page-view {
     display: none;
     width: 100%;
-    animation: pageTransition 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    animation: pageTransitionStatic 0.3s ease forwards;
     flex-direction: column;
     align-items: center;
+}
+
+/* Las páginas que contienen listados tienen animación con desplazamiento */
+#page-reports-list.active,
+#page-credentials-list.active {
+    animation: pageTransition 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
 .page-view.active {
@@ -1345,21 +1353,23 @@ html[data-theme="photophobia"] body {
 .logo-placeholder {
     width: 90px;
     height: 90px;
-    background: rgba(255, 255, 255, 0.03);
-    border: 1px solid var(--panel-border);
+    background: #ffffff;
+    border: 1px solid rgba(255, 255, 255, 0.2);
     border-radius: 24px;
     display: flex;
     align-items: center;
     justify-content: center;
-    color: var(--accent-color);
     margin: 0 auto 1.5rem auto;
-    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3);
     animation: floatLogo 6s ease-in-out infinite;
     transition: all 0.3s ease;
+    overflow: hidden;
 }
 
-.logo-placeholder svg {
-    filter: drop-shadow(0 0 8px rgba(59, 130, 246, 0.3));
+.logo-placeholder img {
+    width: 85%;
+    height: 85%;
+    object-fit: contain;
 }
 
 @keyframes floatLogo {
@@ -1501,6 +1511,7 @@ html[data-theme="photophobia"] body {
     color: white;
     background: linear-gradient(135deg, #fff 0%, #a5b4fc 100%);
     -webkit-background-clip: text;
+    background-clip: text;
     -webkit-text-fill-color: transparent;
     letter-spacing: -0.02em;
 }
@@ -1561,6 +1572,15 @@ html[data-theme="photophobia"] body {
     }
 }
 
+@keyframes pageTransitionStatic {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
 /* === ACCESIBILIDAD ALTO CONTRASTE - OVERRIDES === */
 html[data-theme="low-vision"] .menu-card-btn {
     border: 2px solid #ffffff;
@@ -1600,7 +1620,11 @@ html[data-theme="low-vision"] .back-btn:hover {
 
 html[data-theme="low-vision"] .logo-placeholder {
     border: 2px solid #ffffff;
-    color: #ffff00;
+    background: #000000 !important;
+}
+
+html[data-theme="low-vision"] .logo-placeholder img {
+    filter: invert(1);
 }
 
 /* === BOTÓN INICIAR SESIÓN Y CAMPOS DE LOGIN CUSTOM === */

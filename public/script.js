@@ -249,7 +249,13 @@ function updateDetectedSector() {
 try {
     db.collection("config").doc("map_sectors").get().then(doc => {
         if (doc.exists && doc.data().sectores) {
-            sectores = doc.data().sectores;
+            // Firestore no soporta arreglos anidados, por lo que las coordenadas vienen como {lat, lng}
+            // Las convertimos de vuelta a [lat, lng] para mantener la compatibilidad con el resto del código
+            sectores = doc.data().sectores.map(sec => ({
+                name: sec.name,
+                color: sec.color,
+                polygon: sec.polygon.map(p => Array.isArray(p) ? p : [p.lat, p.lng])
+            }));
             updateDetectedSector();
         }
     });
@@ -653,24 +659,32 @@ document.addEventListener('DOMContentLoaded', () => {
                 didOpen: () => { Swal.showLoading(); }
             });
 
-            // Convertir de nuevo todo a objetos JS planos limpios por si Leaflet o la manipulación 
-            // agregó referencias circulares o funciones que Firestore rechaza
+            // Firestore no permite "nested arrays" (arreglos dentro de arreglos).
+            // Transformamos el polygon [[lat, lng], ...] a un arreglo de objetos [{lat, lng}, ...]
             const cleanSectores = tempSectores.map(sec => ({
                 name: sec.name,
                 color: sec.color,
-                polygon: sec.polygon.map(coord => [coord[0], coord[1]])
+                polygon: sec.polygon.map(coord => ({ lat: coord[0], lng: coord[1] }))
             }));
 
             db.collection("config").doc("map_sectors").set({
                 sectores: cleanSectores
             }).then(() => {
-                sectores = JSON.parse(JSON.stringify(cleanSectores));
+                // Al volver a la memoria local, restauramos al formato de arreglo [lat, lng]
+                sectores = cleanSectores.map(sec => ({
+                    name: sec.name,
+                    color: sec.color,
+                    polygon: sec.polygon.map(p => [p.lat, p.lng])
+                }));
                 updateDetectedSector();
+                Swal.close(); // Cerrar el modal de carga antes de mostrar el éxito
                 Swal.fire('Guardado', 'Los sectores del mapa se han actualizado correctamente. Recargando la aplicación...', 'success').then(() => {
                     location.reload(); // Recargar la página para asegurar refresco de todos los componentes y mapas
                 });
             }).catch(err => {
-                Swal.fire('Error', 'No se pudo guardar: ' + err.message, 'error');
+                Swal.close(); // Cerrar el modal de carga antes de mostrar el error
+                console.error("Error al guardar sectores en Firestore:", err);
+                Swal.fire('Error al Guardar', 'No se pudo guardar: ' + err.message + '\n\nVerifica que las reglas de seguridad de Firestore permitan escritura en la colección "config".', 'error');
             });
         });
     }
@@ -1444,6 +1458,10 @@ function renderFilteredReports() {
         const commentForm = tarjeta.querySelector('.comment-form');
         commentForm.addEventListener('submit', (e) => {
             e.preventDefault();
+            
+            const input = commentForm.querySelector('.comment-input');
+            const text = input.value.trim();
+            
             let isOfficial = !!currentStaffCategory;
             let role = isOfficial ? "Encargado de " + currentStaffCategory : "Normal";
             
@@ -1453,20 +1471,29 @@ function renderFilteredReports() {
             }
             
             if (isOfficial && !currentStaffCategory) {
-                const selectRole = commentForm.querySelector('.official-select').value;
-                const pin = commentForm.querySelector('.official-pin').value;
+                const selectRole = commentForm.querySelector('.official-select');
+                const pinField = commentForm.querySelector('.official-pin');
                 
-                if (pin !== "1234") {
-                    Swal.fire({
-                        title: 'PIN Incorrecto',
-                        text: 'El PIN de personal oficial ingresado no es válido (Sugerencia: usa 1234).',
-                        icon: 'error',
-                        confirmButtonColor: '#3b82f6',
-                        background: 'rgba(15, 23, 42, 0.9)'
-                    });
-                    return;
+                // Si la interfaz no tiene el select/pin agregado (no staff), caemos a normal.
+                if (selectRole && pinField) {
+                    const selectRoleValue = selectRole.value;
+                    const pin = pinField.value;
+                    
+                    if (pin !== "1234") {
+                        Swal.fire({
+                            title: 'PIN Incorrecto',
+                            text: 'El PIN de personal oficial ingresado no es válido (Sugerencia: usa 1234).',
+                            icon: 'error',
+                            confirmButtonColor: '#3b82f6',
+                            background: 'rgba(15, 23, 42, 0.9)'
+                        });
+                        return;
+                    }
+                    role = selectRoleValue;
+                } else {
+                    isOfficial = false;
+                    role = "Normal";
                 }
-                role = selectRole;
             }
             
             if (text) {

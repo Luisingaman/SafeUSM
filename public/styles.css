@@ -2029,3 +2029,9 @@ html[data-theme="low-vision"] .input-field-custom:focus {
         padding: 0.5rem;
     }
 }
+
+/* Evitar bugs y bloqueos de renderizado GPU en Safari/Chrome de móviles por backdrop-filter anidados */
+.webcam-modal .glass-panel {
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+}

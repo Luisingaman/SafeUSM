@@ -1497,10 +1497,11 @@ function renderFilteredReports() {
             }
             
             if (text) {
+                const commentAuthor = localStorage.getItem('custom-user-name') || (currentUserEmail || "Anónimo");
                 db.collection("reportes").doc(reporteId).collection("comentarios").add({
                     texto: text,
                     fecha: new Date(),
-                    autor: currentUserEmail || "Anónimo",
+                    autor: commentAuthor,
                     likes: 0,
                     esOficial: isOfficial,
                     rolOficial: role
@@ -1551,10 +1552,11 @@ function renderFilteredReports() {
                         metaBadge = `<span class="official-badge">${emoji} ${commentData.rolOficial}</span>`;
                     }
                     
+                    const displayName = (commentData.autor || 'Anónimo').includes('@') ? commentData.autor.split('@')[0] : (commentData.autor || 'Anónimo');
                     commentDiv.innerHTML = `
                         <div class="comment-content">
                             <div class="comment-meta">
-                                <span class="comment-author">${commentData.autor || 'Anónimo'}</span>
+                                <span class="comment-author">${displayName}</span>
                                 ${metaBadge}
                                 <span class="comment-date">${commentData.fecha ? commentData.fecha.toDate().toLocaleDateString() : ''}</span>
                             </div>
@@ -1842,7 +1844,7 @@ if (btnSettingsTriggers.length > 0 && accessibilityModal) {
 
     accessBtns.forEach(btn => {
         btn.addEventListener('click', (e) => {
-            const theme = e.target.getAttribute('data-theme');
+            const theme = btn.getAttribute('data-theme');
             
             if (theme === 'default') {
                 document.documentElement.removeAttribute('data-theme');

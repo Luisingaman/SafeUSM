@@ -919,7 +919,7 @@ function parsePriority(priorityVal) {
 async function analyzeReportWithAI(commentText) {
     try {
         // Cargar las reglas configuradas por el administrador en Firestore
-        let rulesText = `1. Clasifica la prioridad del incidente de 0 a 5 (0 prioridad descartada/nula, 1 muy baja, 5 prioridad crítica). Usa 0 si el reporte no es apropiado o de interés para la comunidad y debe ser descartado/eliminado.\n2. Si el reporte contiene venta de artículos, comida, productos, ofertas comerciales, servicios de pago o publicidad de negocios, indícalo (isSale: true) para que sea eliminado.`;
+        let rulesText = DEFAULT_AI_RULES;
         try {
             const rulesDoc = await db.collection("config").doc("ia_rules").get();
             if (rulesDoc.exists && rulesDoc.data().rules) {
@@ -929,16 +929,15 @@ async function analyzeReportWithAI(commentText) {
             console.warn("No se pudieron cargar las reglas de IA desde Firestore. Usando las por defecto.", dbError);
         }
 
-        const prompt = `Analiza el siguiente reporte de incidente en un campus universitario: "${commentText}".
+        const prompt = `Eres el sistema de moderación automática de SafeUSM, una plataforma de reportes de incidentes en campus universitarios.
 
-Debes evaluar el reporte bajo estas condiciones y reglas específicas definidas por el administrador:
+Analiza el siguiente reporte enviado por un usuario: "${commentText}".
+
+Sigue ESTRICTAMENTE este flujo de decisiones y reglas definidas por el administrador:
 ${rulesText}
 
-Responde estrictamente con un objeto JSON en este formato (sin markdown, bloques de código ni explicaciones adicionales):
-{
-  "priority": <número del 0 al 5 según la clasificación de prioridad>,
-  "isSale": <true si se cumple alguna de las reglas para que el reporte sea eliminado/rechazado (ej. por ser venta), de lo contrario false>
-}`;
+IMPORTANTE: Tu respuesta DEBE ser ÚNICAMENTE un objeto JSON válido, sin markdown, sin bloques de código, sin texto adicional antes ni después. Usa exactamente este formato:
+{ "priority": <número 1-5 o null si se elimina>, "accion": "aprobar" | "eliminar", "motivo": "" | "venta" | "inapropiado" }`;
 
         let textResult = "";
         
@@ -982,40 +981,47 @@ Responde estrictamente con un objeto JSON en este formato (sin markdown, bloques
         }
         
         let priorityVal = 1;
-        let isSaleVal = false;
+        let accionVal = 'aprobar';
+        let motivoVal = '';
         
         try {
             let cleanText = textResult.trim();
             // Limpiar marcadores de bloques de código de markdown si existieran
-            cleanText = cleanText.replace(/```json/g, '').replace(/```/g, '').trim();
+            cleanText = cleanText.replace(/```json/gi, '').replace(/```/g, '').trim();
             
-            const jsonMatch = cleanText.match(/\{[\s\S]*\}/);
+            const jsonMatch = cleanText.match(/\{[\s\S]*?\}/);
             if (jsonMatch) {
                 cleanText = jsonMatch[0];
             }
             
             const result = JSON.parse(cleanText);
+            // Soporte para el formato nuevo ({ priority, accion, motivo }) y el legado ({ priority, isSale })
+            accionVal = result.accion || (result.isSale ? 'eliminar' : 'aprobar');
+            motivoVal = result.motivo || (result.isSale ? 'venta' : '');
             priorityVal = result.priority;
-            isSaleVal = result.isSale;
         } catch (parseError) {
             console.warn("Fallo al parsear JSON de la IA, aplicando fallback de regex.", parseError);
-            const priorityMatch = textResult.match(/"priority"\s*:\s*(?:"([^"]+)"|(\d+))/i) || textResult.match(/priority\s*[:=]\s*(\w+)/i);
-            if (priorityMatch) {
-                priorityVal = priorityMatch[1] || priorityMatch[2];
-            }
-            const isSaleMatch = textResult.match(/"isSale"\s*:\s*(true|false)/i) || textResult.match(/isSale\s*[:=]\s*(true|false)/i);
-            if (isSaleMatch) {
-                isSaleVal = isSaleMatch[1].toLowerCase() === 'true';
-            }
+            const priorityMatch = textResult.match(/"priority"\s*:\s*(?:"([^"]+)"|(\d+)|null)/i);
+            if (priorityMatch) priorityVal = priorityMatch[1] || priorityMatch[2] || null;
+            const accionMatch = textResult.match(/"accion"\s*:\s*"(aprobar|eliminar)"/i);
+            if (accionMatch) accionVal = accionMatch[1];
+            const motivoMatch = textResult.match(/"motivo"\s*:\s*"([^"]*)"/i);
+            if (motivoMatch) motivoVal = motivoMatch[1];
+            // Compatibilidad con formato legado
+            const isSaleMatch = textResult.match(/"isSale"\s*:\s*(true|false)/i);
+            if (isSaleMatch && isSaleMatch[1] === 'true') { accionVal = 'eliminar'; motivoVal = 'venta'; }
         }
         
         return {
-            priority: parsePriority(priorityVal),
-            isSale: !!isSaleVal
+            priority: accionVal === 'eliminar' ? null : parsePriority(priorityVal),
+            isSale: motivoVal === 'venta',
+            isInappropriate: motivoVal === 'inapropiado',
+            accion: accionVal,
+            motivo: motivoVal
         };
     } catch (error) {
         console.error("Error crítico en análisis de IA:", error);
-        return { priority: 1, isSale: false };
+        return { priority: 1, isSale: false, isInappropriate: false, accion: 'aprobar', motivo: '' };
     }
 }
 
@@ -1085,30 +1091,42 @@ btnEnviar.addEventListener('click', async () => {
         
         const aiResult = await analyzeReportWithAI(comentario);
 
-        if (aiResult.isSale || aiResult.priority === 0) {
+        if (aiResult.accion === 'eliminar' || aiResult.priority === null) {
             // Eliminar de Firestore
             await db.collection("reportes").doc(reportRef.id).delete();
 
+            let elimTitle = 'Reporte Eliminado por la IA';
+            let elimText = 'Tu reporte fue eliminado automáticamente por el sistema de moderación de SafeUSM.';
+
+            if (aiResult.motivo === 'venta' || aiResult.isSale) {
+                elimTitle = '🛑 Publicación Eliminada — Venta/Spam Detectada';
+                elimText = 'Tu publicación fue eliminada porque no se permiten las ventas ni el spam comercial en esta plataforma. Los reportes deben ser incidentes reales del campus.';
+            } else if (aiResult.motivo === 'inapropiado' || aiResult.isInappropriate) {
+                elimTitle = '🚫 Contenido Eliminado — Normas Comunitarias';
+                elimText = 'Tu contenido ha sido eliminado por infringir nuestras normas comunitarias. Los reportes que contienen lenguaje inapropiado, violencia gráfica o acoso están estrictamente prohibidos.';
+            }
+
             Swal.fire({
-                title: 'Eliminado por la IA',
-                text: aiResult.isSale 
-                    ? 'El reporte ha sido eliminado automáticamente por la IA de SafeUSM porque detectó que se trata de un anuncio de venta comercial, las cuales no están permitidas.'
-                    : 'El reporte ha sido eliminado automáticamente por la IA de SafeUSM porque se clasificó con prioridad/clasificación 0.',
+                title: elimTitle,
+                text: elimText,
                 icon: 'warning',
                 confirmButtonColor: '#ef4444',
                 background: 'rgba(15, 23, 42, 0.9)'
             }).then(() => {
-                navigateTo('page-reports-list');
+                navigateTo('page-home');
             });
         } else {
-            // Actualizar la prioridad asignada
+            // Actualizar la prioridad asignada por la IA
             await db.collection("reportes").doc(reportRef.id).update({
                 prioridad: aiResult.priority
             });
 
+            const priorityLabels = { 1: 'Muy Baja', 2: 'Baja', 3: 'Media', 4: 'Alta', 5: 'Crítica' };
+            const label = priorityLabels[aiResult.priority] || 'Normal';
+
             Swal.fire({
-                title: '¡Reporte Enviado!',
-                text: `El aviso ya está en el sistema. Prioridad asignada por la IA: ${aiResult.priority}/5.`,
+                title: '✅ Reporte Publicado',
+                html: `Tu incidente ya está registrado en el sistema.<br><br><strong>Prioridad asignada por IA: ${aiResult.priority}/5 (${label})</strong>`,
                 icon: 'success',
                 confirmButtonColor: '#3b82f6',
                 background: 'rgba(15, 23, 42, 0.9)'
@@ -2790,8 +2808,29 @@ const textareaAiRules = document.getElementById('ai-custom-rules');
 const btnSaveAiRules = document.getElementById('btn-save-ai-rules');
 const btnBackAiRules = document.getElementById('btn-back-ai-rules');
 
-const DEFAULT_AI_RULES = `1. Clasifica la prioridad del incidente de 1 a 5 (1 prioridad muy baja, 5 prioridad crítica).
-2. Si el reporte contiene venta de artículos, comida, productos, ofertas comerciales, servicios de pago o publicidad de negocios, indícalo (isSale: true) para que sea eliminado.`;
+const DEFAULT_AI_RULES = `SISTEMA DE REGLAS PARA MODERACIÓN Y PRIORIZACIÓN DE REPORTES EN CAMPUS UNIVERSITARIO
+
+=== PASO 1: FILTROS DE ELIMINACIÓN AUTOMÁTICA (PRIORIDAD MÁXIMA) ===
+Antes de asignar prioridad, verifica si el contenido activa alguna de estas reglas de bloqueo:
+
+REGLA A - VENTAS Y SPAM COMERCIAL:
+Eliminar si el texto incluye: ofertas de productos o servicios, enlaces de afiliados, códigos de descuento personales, solicitudes de dinero, precios de artículos, publicidad de negocios, palabras clave como "vendo", "compro", "disponible al por mayor", "interesados al DM", "oferta", "precio", "descuento", "WhatsApp para más info".
+Acción: { "priority": null, "accion": "eliminar", "motivo": "venta" }
+
+REGLA B - CONTENIDO INAPROPIADO (Desnudez, Violencia, Acoso):
+Eliminar si la descripción textual menciona: desnudez total o parcial, pornografía, insinuaciones sexuales explícitas, violencia gráfica, discursos de odio, acoso, amenazas físicas o discriminación.
+Acción: { "priority": null, "accion": "eliminar", "motivo": "inapropiado" }
+
+=== PASO 2: MATRIZ DE PRIORIDADES (si no aplican los filtros anteriores) ===
+Asigna una prioridad del 1 al 5 según el impacto del incidente en la comunidad universitaria:
+
+Prioridad 1 (Muy Baja): Contenido trivial, saludos, agradecimientos, charlas casuales sin acción requerida.
+Prioridad 2 (Baja): Consultas generales, preguntas frecuentes, comentarios informativos comunes.
+Prioridad 3 (Media): Reportes de fallos menores del entorno (una luz quemada, una silla rota), sugerencias de mejora, dudas técnicas.
+Prioridad 4 (Alta): Problemas que afectan a varios usuarios (acceso bloqueado, infraestructura dañada, peleas sin violencia inmediata, acoso verbal).
+Prioridad 5 (Muy Alta / Crítica): Emergencias de seguridad (incendio, pelea con violencia física, robo, accidente, persona desmayada, amenaza de seguridad), situaciones que requieren atención humana inmediata.
+
+Acción para contenido aprobado: { "priority": <1-5>, "accion": "aprobar", "motivo": "" }`;
 
 async function loadAiRules() {
     if (!textareaAiRules) return;

@@ -178,6 +178,15 @@
                 <p id="user-email">Cargando usuario...</p>
                 <button id="btn-logout" class="logout-btn">Cerrar Sesión</button>
             </div>
+            
+            <!-- INICIALIZACIÓN DE LA APP -->
+            <script>
+            window.addEventListener('DOMContentLoaded', () => {
+                // Siempre mostrar la pantalla de bienvenida con el logo al cargar
+                // (El usuario decide si entrar con cuenta o como invitado)
+                navigateTo('page-welcome');
+            });
+            </script>
 
             <div id="upload-container" class="upload-container" style="width: 100%;">
                 <!-- Botones de Foto: Cámara + Galería -->
@@ -771,6 +780,31 @@
                             Eliminar Sector
                         </button>
                     </div>
+
+                    <!-- Separador de sección -->
+                    <div style="display: flex; align-items: center; gap: 0.75rem; margin-top: 0.5rem;">
+                        <div style="flex: 1; height: 1px; background: var(--panel-border);"></div>
+                        <span style="font-size: 0.75rem; color: var(--text-secondary); white-space: nowrap;">Perímetro del Campus</span>
+                        <div style="flex: 1; height: 1px; background: var(--panel-border);"></div>
+                    </div>
+
+                    <div style="display: flex; gap: 0.75rem; flex-wrap: wrap; width: 100%; justify-content: center;">
+                        <button type="button" id="btn-editor-edit-perimeter" class="cat-btn" style="background: rgba(139, 92, 246, 0.15); border-color: rgba(139, 92, 246, 0.4); color: #a78bfa;">
+                            🗺️ Editar Perímetro Exterior
+                        </button>
+                        <button type="button" id="btn-editor-add-perimeter-vertex" class="cat-btn" style="display: none; background: rgba(16, 185, 129, 0.1); border-color: rgba(16, 185, 129, 0.3); color: var(--success);">
+                            ➕ Añadir Vértice al Perímetro
+                        </button>
+                        <button type="button" id="btn-editor-delete-perimeter-vertex" class="cat-btn" style="display: none; background: rgba(239, 68, 68, 0.1); border-color: rgba(239, 68, 68, 0.3); color: var(--danger);">
+                            Quitar Último Vértice
+                        </button>
+                        <button type="button" id="btn-editor-save-perimeter" class="cat-btn" style="display: none; background: rgba(139, 92, 246, 0.2); border-color: rgba(139, 92, 246, 0.5); color: #c4b5fd; font-weight: 700;">
+                            💾 Guardar Perímetro
+                        </button>
+                    </div>
+                    <p id="perimeter-editor-tip" style="display: none; font-size: 0.82rem; color: #a78bfa; text-align: center; line-height: 1.5; padding: 0.5rem; background: rgba(139,92,246,0.08); border-radius: 10px; border: 1px solid rgba(139,92,246,0.2);">
+                        🟣 <strong>Modo Perímetro activo.</strong> Arrastra los vértices morados para ajustar el borde del campus. Los reportes solo se podrán enviar desde dentro del área definida.
+                    </p>
 
                     <p style="font-size: 0.85rem; color: var(--text-secondary); text-align: center; margin-top: 0.5rem; line-height: 1.5;">
                         💡 <strong>Instrucciones:</strong> Selecciona un sector en la lista superior. Arrastra las manillas circulares amarillas en el mapa para posicionar cada esquina. Usa los botones para agregar vértices, cambiar colores o crear nuevos sectores.

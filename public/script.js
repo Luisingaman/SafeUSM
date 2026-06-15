@@ -861,7 +861,16 @@ if (btnBackLogin) {
     btnBackLogin.addEventListener('click', () => navigateTo('page-welcome'));
 }
 backBtns.forEach(btn => {
-    if (btn.id !== 'btn-back-credentials' && btn.id !== 'btn-back-profile' && btn.id !== 'btn-back-edit-profile' && btn.id !== 'btn-back-login') {
+    // Exclusiones: estos botones ya tienen su propio listener asignado arriba
+    const excluded = [
+        'btn-back-credentials',
+        'btn-back-profile',
+        'btn-back-edit-profile',
+        'btn-back-login',
+        'btn-back-ai-rules',          // Reglas IA → vuelve a page-welcome
+        'btn-back-edit-map-sectors'   // Editor de mapa → ya tiene listener propio
+    ];
+    if (!excluded.includes(btn.id)) {
         btn.addEventListener('click', () => navigateTo('page-home'));
     }
 });

@@ -3119,13 +3119,214 @@ function updateActiveSectorColor(newColor) {
     }
 }
 
+// --- EDITOR DE PERÍMETRO EXTERIOR DEL CAMPUS ---
+let isEditingPerimeter = false;
+let perimeterHandles = [];        // Marcadores arrastrables del perímetro
+let perimeterPolygonLayer = null; // Capa del polígono del perímetro en el editor
+let tempCampusCoords = [];        // Copia temporal de campusCoordinates para editar
+
+function enterPerimeterEditMode() {
+    if (!editorMap) setupEditorMap();
+
+    // Limpiar estado del editor de sectores (quitar handles de sectores)
+    if (editorPolygon) { editorMap.removeLayer(editorPolygon); editorPolygon = null; }
+    editorMarkers.forEach(m => editorMap.removeLayer(m));
+    editorMarkers = [];
+    editorBackgroundPolygons.forEach(p => editorMap.removeLayer(p));
+    editorBackgroundPolygons = [];
+
+    // Ocultar controles de sectores mientras se edita el perímetro
+    const sectorControls = document.getElementById('editor-sector-select');
+    if (sectorControls) sectorControls.closest('div[style]').style.opacity = '0.4';
+
+    // Copiar coordenadas actuales para edición temporal
+    tempCampusCoords = campusCoordinates.map(c => [...c]);
+
+    // Dibujar polígono del perímetro editable (morado)
+    if (perimeterPolygonLayer) editorMap.removeLayer(perimeterPolygonLayer);
+    perimeterPolygonLayer = L.polygon(tempCampusCoords, {
+        color: '#8b5cf6',
+        fillColor: '#8b5cf6',
+        fillOpacity: 0.12,
+        weight: 3,
+        dashArray: null
+    }).addTo(editorMap);
+
+    // Centrar mapa en el perímetro
+    try { editorMap.fitBounds(perimeterPolygonLayer.getBounds(), { padding: [30, 30] }); }
+    catch(e) { editorMap.setView(usmSanJoaquin, 17); }
+
+    renderPerimeterHandles();
+
+    // Mostrar botones de perímetro
+    document.getElementById('btn-editor-add-perimeter-vertex').style.display = '';
+    document.getElementById('btn-editor-delete-perimeter-vertex').style.display = '';
+    document.getElementById('btn-editor-save-perimeter').style.display = '';
+    document.getElementById('perimeter-editor-tip').style.display = '';
+    document.getElementById('btn-editor-edit-perimeter').textContent = '🚫 Salir del Editor de Perímetro';
+    document.getElementById('btn-editor-edit-perimeter').style.background = 'rgba(239,68,68,0.1)';
+    document.getElementById('btn-editor-edit-perimeter').style.borderColor = 'rgba(239,68,68,0.3)';
+    document.getElementById('btn-editor-edit-perimeter').style.color = '#f87171';
+
+    isEditingPerimeter = true;
+}
+
+function exitPerimeterEditMode() {
+    // Limpiar handles del perímetro
+    perimeterHandles.forEach(m => editorMap.removeLayer(m));
+    perimeterHandles = [];
+
+    // Quitar polígono temporal
+    if (perimeterPolygonLayer) { editorMap.removeLayer(perimeterPolygonLayer); perimeterPolygonLayer = null; }
+
+    // Restaurar opacidad de controles de sectores
+    const sectorControls = document.getElementById('editor-sector-select');
+    if (sectorControls) sectorControls.closest('div[style]').style.opacity = '1';
+
+    // Ocultar botones de perímetro
+    document.getElementById('btn-editor-add-perimeter-vertex').style.display = 'none';
+    document.getElementById('btn-editor-delete-perimeter-vertex').style.display = 'none';
+    document.getElementById('btn-editor-save-perimeter').style.display = 'none';
+    document.getElementById('perimeter-editor-tip').style.display = 'none';
+    document.getElementById('btn-editor-edit-perimeter').textContent = '🗺️ Editar Perímetro Exterior';
+    document.getElementById('btn-editor-edit-perimeter').style.background = 'rgba(139, 92, 246, 0.15)';
+    document.getElementById('btn-editor-edit-perimeter').style.borderColor = 'rgba(139, 92, 246, 0.4)';
+    document.getElementById('btn-editor-edit-perimeter').style.color = '#a78bfa';
+
+    isEditingPerimeter = false;
+
+    // Recargar sector editor
+    loadSectorsInEditorList();
+}
+
+function renderPerimeterHandles() {
+    // Limpiar handles anteriores
+    perimeterHandles.forEach(m => editorMap.removeLayer(m));
+    perimeterHandles = [];
+
+    tempCampusCoords.forEach((coords, idx) => {
+        const handleIcon = L.divIcon({
+            className: '',
+            html: `<div style="width:16px;height:16px;background:#8b5cf6;border:2px solid #fff;border-radius:50%;box-shadow:0 2px 8px rgba(139,92,246,0.7);cursor:grab;"></div>`,
+            iconSize: [16, 16],
+            iconAnchor: [8, 8]
+        });
+
+        const marker = L.marker([coords[0], coords[1]], {
+            icon: handleIcon,
+            draggable: true
+        }).addTo(editorMap);
+
+        marker.on('drag', () => {
+            const pos = marker.getLatLng();
+            tempCampusCoords[idx] = [pos.lat, pos.lng];
+            perimeterPolygonLayer.setLatLngs(tempCampusCoords);
+        });
+
+        marker.on('dragend', () => {
+            const pos = marker.getLatLng();
+            tempCampusCoords[idx] = [pos.lat, pos.lng];
+            perimeterPolygonLayer.setLatLngs(tempCampusCoords);
+        });
+
+        perimeterHandles.push(marker);
+    });
+}
+
+// Botón: Activar/Desactivar editor de perímetro
+const btnEditPerimeter = document.getElementById('btn-editor-edit-perimeter');
+if (btnEditPerimeter) {
+    btnEditPerimeter.addEventListener('click', () => {
+        if (isEditingPerimeter) {
+            exitPerimeterEditMode();
+        } else {
+            enterPerimeterEditMode();
+        }
+    });
+}
+
+// Botón: Añadir vértice al perímetro (lo inserta en el centro del mapa)
+const btnAddPerimeterVertex = document.getElementById('btn-editor-add-perimeter-vertex');
+if (btnAddPerimeterVertex) {
+    btnAddPerimeterVertex.addEventListener('click', () => {
+        if (!isEditingPerimeter) return;
+        const center = editorMap.getCenter();
+        tempCampusCoords.push([center.lat, center.lng]);
+        perimeterPolygonLayer.setLatLngs(tempCampusCoords);
+        renderPerimeterHandles();
+    });
+}
+
+// Botón: Quitar último vértice del perímetro
+const btnDeletePerimeterVertex = document.getElementById('btn-editor-delete-perimeter-vertex');
+if (btnDeletePerimeterVertex) {
+    btnDeletePerimeterVertex.addEventListener('click', () => {
+        if (!isEditingPerimeter || tempCampusCoords.length <= 3) {
+            Swal.fire({ title: 'Mínimo 3 vértices', text: 'El perímetro necesita al menos 3 puntos.', icon: 'warning', background: 'rgba(15,23,42,0.9)', confirmButtonColor: '#8b5cf6' });
+            return;
+        }
+        tempCampusCoords.pop();
+        perimeterPolygonLayer.setLatLngs(tempCampusCoords);
+        renderPerimeterHandles();
+    });
+}
+
+// Botón: Guardar perímetro en Firestore y aplicar en tiempo real
+const btnSavePerimeter = document.getElementById('btn-editor-save-perimeter');
+if (btnSavePerimeter) {
+    btnSavePerimeter.addEventListener('click', async () => {
+        if (!isEditingPerimeter || tempCampusCoords.length < 3) return;
+
+        btnSavePerimeter.disabled = true;
+        btnSavePerimeter.innerHTML = '<span>Guardando...</span>';
+
+        try {
+            await db.collection('config').doc('campus_perimeter').set({
+                coordinates: tempCampusCoords,
+                updatedAt: new Date()
+            });
+
+            // Aplicar en memoria para que tome efecto inmediato sin recargar
+            campusCoordinates.length = 0;
+            tempCampusCoords.forEach(c => campusCoordinates.push(c));
+
+            Swal.fire({
+                title: '✅ Perímetro Guardado',
+                text: 'El nuevo límite del campus ha sido aplicado. Los reportes solo se podrán publicar dentro del área definida.',
+                icon: 'success',
+                confirmButtonColor: '#8b5cf6',
+                background: 'rgba(15, 23, 42, 0.9)'
+            });
+
+            exitPerimeterEditMode();
+        } catch (error) {
+            console.error('Error al guardar perímetro:', error);
+            Swal.fire({ title: 'Error', text: 'No se pudo guardar el perímetro: ' + error.message, icon: 'error', background: 'rgba(15,23,42,0.9)' });
+        } finally {
+            btnSavePerimeter.disabled = false;
+            btnSavePerimeter.innerHTML = '💾 Guardar Perímetro';
+        }
+    });
+}
+
+// Al iniciar la app, cargar el perímetro guardado en Firestore si existe
+async function loadSavedPerimeter() {
+    try {
+        const doc = await db.collection('config').doc('campus_perimeter').get();
+        if (doc.exists && doc.data().coordinates && doc.data().coordinates.length >= 3) {
+            const saved = doc.data().coordinates;
+            campusCoordinates.length = 0;
+            saved.forEach(c => campusCoordinates.push(c));
+            console.log(`Perímetro del campus cargado desde Firestore (${saved.length} vértices).`);
+        }
+    } catch (e) {
+        console.warn('No se pudo cargar el perímetro desde Firestore, usando el por defecto.', e);
+    }
+}
+loadSavedPerimeter();
+
 // --- INICIALIZACIÓN DE LA APP ---
 window.addEventListener('DOMContentLoaded', () => {
-    // Redirigir a Home si hay sesión iniciada, si no redirigir a Login Custom inmediatamente
-    if (localStorage.getItem('custom-user-email')) {
-        navigateTo('page-home');
-    } else {
-        navigateTo('page-login-custom');
-        setLoginMode('login');
-    }
+    // Siempre mostrar la pantalla de bienvenida con el logo al cargar
+    navigateTo('page-welcome');
 });

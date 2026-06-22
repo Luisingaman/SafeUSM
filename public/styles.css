@@ -565,6 +565,7 @@ button.swal2-confirm { border-radius: 12px !important; }
     display: flex;
     flex-direction: column;
     align-items: center;
+    margin: auto; /* Fixes flexbox center cutoff bug */
 }
 
 .webcam-video-container {
@@ -1824,7 +1825,7 @@ html[data-theme="low-vision"] .input-field-custom:focus {
 /* Adaptación para teléfonos móviles típicos (max-width: 640px) */
 @media (max-width: 640px) {
     body {
-        padding: 1.5rem 0.75rem;
+        padding: 3.5rem 0.75rem 1.5rem 0.75rem; /* Extra top padding to clear Android status bar / notch */
     }
 
     .glass-panel {
@@ -1858,15 +1859,15 @@ html[data-theme="low-vision"] .input-field-custom:focus {
 
     /* Botones de acción absolutos en la cabecera (welcome y home) */
     .left-actions, .user-actions {
-        top: 24px;
+        top: 15px;
     }
     
     .left-actions {
-        left: 24px;
+        left: 15px;
     }
 
     .user-actions {
-        right: 24px;
+        right: 15px;
     }
 
     .login-pill-btn {

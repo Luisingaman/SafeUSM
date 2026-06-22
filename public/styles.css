@@ -551,6 +551,11 @@ button.swal2-confirm { border-radius: 12px !important; }
     justify-content: center;
     align-items: center;
     padding: 1rem;
+    padding-top: env(safe-area-inset-top, 1rem);
+    padding-bottom: env(safe-area-inset-bottom, 1rem);
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    box-sizing: border-box;
 }
 
 .webcam-content {
@@ -1853,15 +1858,15 @@ html[data-theme="low-vision"] .input-field-custom:focus {
 
     /* Botones de acción absolutos en la cabecera (welcome y home) */
     .left-actions, .user-actions {
-        top: 10px;
+        top: 24px;
     }
     
     .left-actions {
-        left: 10px;
+        left: 24px;
     }
 
     .user-actions {
-        right: 10px;
+        right: 24px;
     }
 
     .login-pill-btn {
@@ -1971,6 +1976,20 @@ html[data-theme="low-vision"] .input-field-custom:focus {
     .global-map-container {
         height: 300px;
         border-radius: 16px;
+    }
+
+    /* Fix: Modal de accesibilidad centrado en celulares */
+    .webcam-modal {
+        align-items: flex-start;
+        padding-top: 2rem;
+        padding-bottom: 2rem;
+    }
+
+    .webcam-modal .webcam-content {
+        margin: auto 0;
+        max-height: calc(100vh - 4rem);
+        max-height: calc(100dvh - 4rem);
+        overflow-y: auto;
     }
 }
 

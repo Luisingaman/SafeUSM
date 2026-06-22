@@ -551,11 +551,6 @@ button.swal2-confirm { border-radius: 12px !important; }
     justify-content: center;
     align-items: center;
     padding: 1rem;
-    padding-top: env(safe-area-inset-top, 1rem);
-    padding-bottom: env(safe-area-inset-bottom, 1rem);
-    overflow-y: auto;
-    -webkit-overflow-scrolling: touch;
-    box-sizing: border-box;
 }
 
 .webcam-content {
@@ -565,7 +560,6 @@ button.swal2-confirm { border-radius: 12px !important; }
     display: flex;
     flex-direction: column;
     align-items: center;
-    margin: auto; /* Fixes flexbox center cutoff bug */
 }
 
 .webcam-video-container {
@@ -1825,7 +1819,7 @@ html[data-theme="low-vision"] .input-field-custom:focus {
 /* Adaptación para teléfonos móviles típicos (max-width: 640px) */
 @media (max-width: 640px) {
     body {
-        padding: 3.5rem 0.75rem 1.5rem 0.75rem; /* Extra top padding to clear Android status bar / notch */
+        padding: 1.5rem 0.75rem;
     }
 
     .glass-panel {
@@ -1859,15 +1853,15 @@ html[data-theme="low-vision"] .input-field-custom:focus {
 
     /* Botones de acción absolutos en la cabecera (welcome y home) */
     .left-actions, .user-actions {
-        top: 15px;
+        top: 10px;
     }
     
     .left-actions {
-        left: 15px;
+        left: 10px;
     }
 
     .user-actions {
-        right: 15px;
+        right: 10px;
     }
 
     .login-pill-btn {
@@ -1977,20 +1971,6 @@ html[data-theme="low-vision"] .input-field-custom:focus {
     .global-map-container {
         height: 300px;
         border-radius: 16px;
-    }
-
-    /* Fix: Modal de accesibilidad centrado en celulares */
-    .webcam-modal {
-        align-items: flex-start;
-        padding-top: 2rem;
-        padding-bottom: 2rem;
-    }
-
-    .webcam-modal .webcam-content {
-        margin: auto 0;
-        max-height: calc(100vh - 4rem);
-        max-height: calc(100dvh - 4rem);
-        overflow-y: auto;
     }
 }
 

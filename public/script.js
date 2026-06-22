@@ -72,9 +72,10 @@ btnLogout.addEventListener('click', () => {
     auth.signOut();
 });
 
+/* DESACTIVADO TEMPORALMENTE PARA PRUEBAS DE FOTO
 auth.onAuthStateChanged(user => {
     if (user) {
-        if (user.email.endsWith('@usm.cl') || user.email.endsWith('@sansano.usm.cl') || user.email.endsWith('@sansano.cl') || user.email.endsWith('@gmail.com')) {
+        if (user.email.endsWith('@usm.cl') || user.email.endsWith('@sansano.usm.cl') || user.email.endsWith('@sansano.cl')) {
             currentUserEmail = user.email;
             userEmailText.textContent = `Conectado como: ${user.email}`;
             loginSection.style.display = 'none';
@@ -84,7 +85,7 @@ auth.onAuthStateChanged(user => {
             setTimeout(() => { formMap.invalidateSize(); }, 300);
         } else {
             auth.signOut();
-            Swal.fire('Acceso Denegado', 'Debes usar un correo institucional de la USM o cuenta permitida.', 'error');
+            Swal.fire('Acceso Denegado', 'Debes usar un correo institucional de la USM (@usm.cl, @sansano.usm.cl o @sansano.cl).', 'error');
         }
     } else {
         currentUserEmail = null;
@@ -93,6 +94,10 @@ auth.onAuthStateChanged(user => {
         uploadContainer.style.display = 'none';
     }
 });
+*/
+
+// Forzamos el nombre de usuario para que no falle el reporte mientras probamos sin login
+currentUserEmail = "usuario_de_prueba@sansano.usm.cl";
 
 // --- FUNCIÓN AUXILIAR: PUNTO EN POLÍGONO (Ray-casting Algorithm) ---
 function isPointInPolygon(lat, lng, polygon) {
@@ -1659,17 +1664,11 @@ db.collection("reportes").orderBy("fecha", "desc").onSnapshot((snapshot) => {
         if (change.type === "added" && !isFirstLoad) {
             const data = change.doc.data();
             
-            // Verificación unificada para Android Native Bridge o Web Notifications
+            // Verificación para Android Native Bridge o Web Notifications
             const hasAndroidBridge = typeof window.AndroidBridge !== "undefined";
-            if (hasAndroidBridge || (window.Notification && Notification.permission === "granted")) {
+            if (hasAndroidBridge || Notification.permission === "granted") {
                 new Notification(`Nuevo Aviso: ${data.categoria}`, {
                     body: data.texto
-                });
-            } else if (!hasAndroidBridge && window.Notification && Notification.permission !== "denied") {
-                Notification.requestPermission().then(permission => {
-                    if (permission === "granted") {
-                        new Notification(`Nuevo Aviso: ${data.categoria}`, { body: data.texto });
-                    }
                 });
             }
 
@@ -1684,6 +1683,16 @@ db.collection("reportes").orderBy("fecha", "desc").onSnapshot((snapshot) => {
                 timerProgressBar: true,
                 background: 'rgba(15, 23, 42, 0.95)'
             });
+            
+            if (window.Notification && Notification.permission === "granted") {
+                new Notification(`Nuevo Aviso: ${data.categoria}`, { body: data.texto });
+            } else if (window.Notification && Notification.permission !== "denied") {
+                Notification.requestPermission().then(permission => {
+                    if (permission === "granted") {
+                        new Notification(`Nuevo Aviso: ${data.categoria}`, { body: data.texto });
+                    }
+                });
+            }
         }
     });
 

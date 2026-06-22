@@ -950,13 +950,29 @@ IMPORTANTE: Tu respuesta DEBE ser ÚNICAMENTE un objeto JSON válido, sin markdo
 
         let textResult = "";
         
-        // 1. Intentar usar Puter AI (Altamente confiable, estable y libre de keys)
+        // 1. Intentar usar Puter AI (solo si el SDK está disponible y autenticado)
+        // En APK/WebView el login de Puter no funciona (abre pestaña externa sin sesión),
+        // así que verificamos autenticación antes de intentar para evitar bloqueos.
         if (typeof puter !== 'undefined' && puter.ai) {
             try {
-                console.log("Conectando con Puter AI...");
-                const response = await puter.ai.chat(prompt, { model: 'openai/gpt-4o-mini' });
-                textResult = response.toString();
-                console.log("Respuesta recibida exitosamente desde Puter AI.");
+                // Verificar si Puter está autenticado (evita popup de login en WebView/APK)
+                const isAuthed = puter.auth && typeof puter.auth.isSignedIn === 'function' 
+                    ? puter.auth.isSignedIn() 
+                    : (puter.authToken || puter.auth?.token);
+                
+                if (isAuthed) {
+                    console.log("Conectando con Puter AI (usuario autenticado)...");
+                    // Timeout de 15 segundos para evitar que se cuelgue en WebView
+                    const puterPromise = puter.ai.chat(prompt, { model: 'openai/gpt-4o-mini' });
+                    const timeoutPromise = new Promise((_, reject) => 
+                        setTimeout(() => reject(new Error('Puter AI timeout')), 15000)
+                    );
+                    const response = await Promise.race([puterPromise, timeoutPromise]);
+                    textResult = response.toString();
+                    console.log("Respuesta recibida exitosamente desde Puter AI.");
+                } else {
+                    console.log("Puter AI no autenticado. Saltando a Pollinations (sin requerir login)...");
+                }
             } catch (puterError) {
                 console.warn("Fallo al conectar con Puter AI, intentando fallback de Pollinations...", puterError);
             }

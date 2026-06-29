@@ -425,7 +425,9 @@ function navigateTo(pageId) {
 
     // Existing navigation logic (show/hide pages) continues as before
     // Hide all pages
-    [pageWelcome, pageHome, pageReportForm, pageReportsList, pageLoginCustom, pageCredentialsList, pageProfile, pageEditProfile, pageAiRules, pageEditMapSectors].forEach(page => {
+    [pageWelcome, pageHome, pageReportForm, pageReportsList, pageLoginCustom, pageCredentialsList, pageProfile, pageEditProfile, pageAiRules, pageEditMapSectors,
+     document.getElementById('page-accessibility')
+    ].forEach(page => {
         if (page) {
             page.style.display = 'none';
             page.classList.remove('active');
@@ -1885,16 +1887,28 @@ if (savedCustomEmail) {
     }
 }
 
-if (btnSettingsTriggers.length > 0 && accessibilityModal) {
+// Variable para recordar desde qué página se abrió la configuración de accesibilidad
+let pageBeforeAccessibility = 'page-home';
+
+if (btnSettingsTriggers.length > 0) {
     btnSettingsTriggers.forEach(btn => {
         btn.addEventListener('click', () => {
-            accessibilityModal.style.display = 'flex';
+            // Guardar la página actual antes de ir a accesibilidad
+            const activePage = document.querySelector('.page-view.active');
+            if (activePage && activePage.id && activePage.id !== 'page-accessibility') {
+                pageBeforeAccessibility = activePage.id;
+            }
+            navigateTo('page-accessibility');
         });
     });
 
-    btnCloseAccessibility.addEventListener('click', () => {
-        accessibilityModal.style.display = 'none';
-    });
+    // Botón de volver en la página de accesibilidad
+    const btnBackAccessibility = document.getElementById('btn-back-accessibility');
+    if (btnBackAccessibility) {
+        btnBackAccessibility.addEventListener('click', () => {
+            navigateTo(pageBeforeAccessibility);
+        });
+    }
 
     accessBtns.forEach(btn => {
         btn.addEventListener('click', (e) => {

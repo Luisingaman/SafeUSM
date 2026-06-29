@@ -97,7 +97,7 @@ auth.onAuthStateChanged(user => {
 */
 
 // Forzamos el nombre de usuario para que no falle el reporte mientras probamos sin login
-currentUserEmail = "usuario_de_prueba@sansano.usm.cl";
+currentUserEmail = "usuario no registrado";
 
 // --- FUNCIÓN AUXILIAR: PUNTO EN POLÍGONO (Ray-casting Algorithm) ---
 function isPointInPolygon(lat, lng, polygon) {
@@ -218,6 +218,11 @@ let editorMarkers = [];
 let tempSectores = [];
 let editorBackgroundPolygons = [];
 
+// Capas de polígono del campus para actualización dinámica
+let formCampusPolygon = null;
+let globalCampusPolygon = null;
+let editorCampusPolygon = null;
+
 function getSectorFromCoords(lat, lng) {
     for (const sec of sectores) {
         if (isPointInPolygon(lat, lng, sec.polygon)) {
@@ -270,7 +275,7 @@ L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r
 }).addTo(formMap);
 
 // Polígono del campus en el mapa del formulario
-L.polygon(campusCoordinates, {
+formCampusPolygon = L.polygon(campusCoordinates, {
     color: '#3b82f6',
     fillColor: '#3b82f6',
     fillOpacity: 0.04,
@@ -349,7 +354,7 @@ L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r
 }).addTo(globalMap);
 
 // Polígono del campus en el mapa global
-L.polygon(campusCoordinates, {
+globalCampusPolygon = L.polygon(campusCoordinates, {
     color: '#3b82f6',
     fillColor: '#3b82f6',
     fillOpacity: 0.04,
@@ -2943,7 +2948,7 @@ function setupEditorMap() {
     }).addTo(editorMap);
 
     // Dibujar polígono del campus como referencia
-    L.polygon(campusCoordinates, {
+    editorCampusPolygon = L.polygon(campusCoordinates, {
         color: '#3b82f6',
         fillColor: '#3b82f6',
         fillOpacity: 0.02,
@@ -3281,14 +3286,23 @@ if (btnSavePerimeter) {
         btnSavePerimeter.innerHTML = '<span>Guardando...</span>';
 
         try {
+            // Firestore no permite "nested arrays" (arreglos dentro de arreglos).
+            // Transformamos el polígono [[lat, lng], ...] a un arreglo de objetos [{lat, lng}, ...]
+            const cleanCoords = tempCampusCoords.map(coord => ({ lat: coord[0], lng: coord[1] }));
+
             await db.collection('config').doc('campus_perimeter').set({
-                coordinates: tempCampusCoords,
+                coordinates: cleanCoords,
                 updatedAt: new Date()
             });
 
             // Aplicar en memoria para que tome efecto inmediato sin recargar
             campusCoordinates.length = 0;
             tempCampusCoords.forEach(c => campusCoordinates.push(c));
+
+            // Actualizar dinámicamente las capas de polígono en los mapas
+            if (formCampusPolygon) formCampusPolygon.setLatLngs(campusCoordinates);
+            if (globalCampusPolygon) globalCampusPolygon.setLatLngs(campusCoordinates);
+            if (editorCampusPolygon) editorCampusPolygon.setLatLngs(campusCoordinates);
 
             Swal.fire({
                 title: '✅ Perímetro Guardado',
@@ -3316,8 +3330,19 @@ async function loadSavedPerimeter() {
         if (doc.exists && doc.data().coordinates && doc.data().coordinates.length >= 3) {
             const saved = doc.data().coordinates;
             campusCoordinates.length = 0;
-            saved.forEach(c => campusCoordinates.push(c));
-            console.log(`Perímetro del campus cargado desde Firestore (${saved.length} vértices).`);
+            saved.forEach(c => {
+                if (Array.isArray(c)) {
+                    campusCoordinates.push(c);
+                } else if (c && typeof c.lat === 'number' && typeof c.lng === 'number') {
+                    campusCoordinates.push([c.lat, c.lng]);
+                }
+            });
+            console.log(`Perímetro del campus cargado desde Firestore (${campusCoordinates.length} vértices).`);
+            
+            // Actualizar dinámicamente las capas de polígono en los mapas si ya están instanciadas
+            if (formCampusPolygon) formCampusPolygon.setLatLngs(campusCoordinates);
+            if (globalCampusPolygon) globalCampusPolygon.setLatLngs(campusCoordinates);
+            if (editorCampusPolygon) editorCampusPolygon.setLatLngs(campusCoordinates);
         }
     } catch (e) {
         console.warn('No se pudo cargar el perímetro desde Firestore, usando el por defecto.', e);

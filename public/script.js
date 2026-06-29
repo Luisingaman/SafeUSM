@@ -3280,55 +3280,48 @@ if (btnDeletePerimeterVertex) {
 const btnSavePerimeter = document.getElementById('btn-editor-save-perimeter');
 if (btnSavePerimeter) {
     btnSavePerimeter.addEventListener('click', async () => {
-        if (!isEditingPerimeter || tempCampusCoords.length < 3) return;
+        if (!isEditingPerimeter || !perimeterPolygonLayer) return;
 
         btnSavePerimeter.disabled = true;
         btnSavePerimeter.innerHTML = '<span>Guardando...</span>';
 
         try {
-            // Firestore no permite "nested arrays" (arreglos dentro de arreglos).
-            // Aplanamos cualquier estructura anidada o tipos de objetos que Leaflet inserte en tempCampusCoords.
+            // Obtener las coordenadas directamente desde la capa de Leaflet.
+            // getLatLngs() devuelve [[LatLng, LatLng, ...]] para polígonos simples.
+            // Aplanamos el primer nivel y extraemos únicamente lat y lng como números primitivos
+            // para que Firestore no reciba arreglos anidados ni objetos con métodos.
+            const rawLatLngs = perimeterPolygonLayer.getLatLngs();
+
+            // Aplanar recursivamente hasta llegar a objetos LatLng con .lat y .lng numéricos
             const cleanCoords = [];
-            
-            function processCoordinateItem(item) {
-                if (!item) return;
-                
-                // Si es un arreglo
-                if (Array.isArray(item)) {
-                    // Si contiene un par numérico [lat, lng]
-                    if (item.length === 2 && typeof item[0] === 'number' && typeof item[1] === 'number') {
-                        cleanCoords.push({ lat: item[0], lng: item[1] });
-                    } else {
-                        // De lo contrario, recorremos recursivamente para aplanar
-                        item.forEach(subItem => processCoordinateItem(subItem));
+            function flattenLatLngs(arr) {
+                arr.forEach(item => {
+                    if (Array.isArray(item)) {
+                        flattenLatLngs(item);
+                    } else if (item && typeof item.lat === 'number' && typeof item.lng === 'number') {
+                        cleanCoords.push({ lat: item.lat, lng: item.lng });
                     }
-                } 
-                // Si es un objeto LatLng de Leaflet u objeto plano con propiedades lat/lng
-                else if (typeof item.lat === 'number' && typeof item.lng === 'number') {
-                    cleanCoords.push({ lat: item.lat, lng: item.lng });
-                }
-                // Si contiene latlng como sub-propiedad
-                else if (item.latlng) {
-                    processCoordinateItem(item.latlng);
-                }
+                });
             }
+            flattenLatLngs(rawLatLngs);
 
-            processCoordinateItem(tempCampusCoords);
-
-            // Validar que se hayan extraído vértices suficientes
             if (cleanCoords.length < 3) {
-                throw new Error("No se pudieron extraer suficientes coordenadas válidas para guardar el perímetro.");
+                throw new Error('No se encontraron suficientes vértices en el polígono del perímetro.');
             }
 
+            // Guardar en Firestore como arreglo de objetos planos (sin arreglos anidados)
             await db.collection('config').doc('campus_perimeter').set({
                 coordinates: cleanCoords,
                 updatedAt: new Date()
             });
 
-            // Aplicar en memoria para que tome efecto inmediato sin recargar.
-            // Para mantener la consistencia interna del código, las volvemos a almacenar como arreglos [lat, lng]
+            // Actualizar campusCoordinates en memoria con arreglos [lat, lng] para Leaflet interno
             campusCoordinates.length = 0;
             cleanCoords.forEach(c => campusCoordinates.push([c.lat, c.lng]));
+
+            // Actualizar también tempCampusCoords para consistencia
+            tempCampusCoords.length = 0;
+            campusCoordinates.forEach(c => tempCampusCoords.push([...c]));
 
             // Actualizar dinámicamente las capas de polígono en los mapas
             if (formCampusPolygon) formCampusPolygon.setLatLngs(campusCoordinates);

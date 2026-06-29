@@ -955,43 +955,32 @@ IMPORTANTE: Tu respuesta DEBE ser ÚNICAMENTE un objeto JSON válido, sin markdo
 
         let textResult = "";
         
-        // 1. Intentar usar Puter AI (Altamente confiable, estable y libre de keys)
-        if (typeof puter !== 'undefined' && puter.ai) {
+        // Usar Pollinations AI (gratuita, sin login, sin API key)
+        console.log("Conectando con Pollinations AI...");
+        const models = ['openai', 'mistral', 'llama', 'gemini'];
+        let success = false;
+        
+        for (const model of models) {
             try {
-                console.log("Conectando con Puter AI...");
-                const response = await puter.ai.chat(prompt, { model: 'openai/gpt-4o-mini' });
-                textResult = response.toString();
-                console.log("Respuesta recibida exitosamente desde Puter AI.");
-            } catch (puterError) {
-                console.warn("Fallo al conectar con Puter AI, intentando fallback de Pollinations...", puterError);
+                const response = await fetch(`https://text.pollinations.ai/${encodeURIComponent(prompt)}?model=${model}&json=true`, {
+                    method: 'GET',
+                    headers: { 'Accept': 'application/json, text/plain' }
+                });
+                if (response.ok) {
+                    textResult = await response.text();
+                    if (textResult && textResult.trim().length > 0 && !textResult.includes("Queue full") && !textResult.includes("error")) {
+                        success = true;
+                        console.log(`Análisis completado con Pollinations (modelo: ${model})`);
+                        break;
+                    }
+                }
+            } catch (fetchErr) {
+                console.warn(`Error con Pollinations modelo ${model}:`, fetchErr);
             }
         }
         
-        // 2. Fallback: Usar Pollinations AI si Puter no está disponible o falla
-        if (!textResult) {
-            console.log("Conectando con Pollinations AI (Fallback)...");
-            const models = ['openai', 'mistral', 'llama', 'gemini'];
-            let success = false;
-            
-            for (const model of models) {
-                try {
-                    const response = await fetch(`https://text.pollinations.ai/${encodeURIComponent(prompt)}?model=${model}&json=true`);
-                    if (response.ok) {
-                        textResult = await response.text();
-                        if (textResult && textResult.trim().length > 0 && !textResult.includes("Queue full") && !textResult.includes("error")) {
-                            success = true;
-                            console.log(`Fallback exitoso usando Pollinations con modelo: ${model}`);
-                            break;
-                        }
-                    }
-                } catch (fetchErr) {
-                    console.warn(`Error en fallback de Pollinations con modelo ${model}:`, fetchErr);
-                }
-            }
-            
-            if (!success) {
-                throw new Error("No se pudo obtener una respuesta válida de ninguna de las APIs de IA gratuitas.");
-            }
+        if (!success) {
+            throw new Error("No se pudo obtener respuesta de Pollinations AI. Verifica tu conexión a internet.");
         }
         
         let priorityVal = 1;
@@ -1103,16 +1092,6 @@ btnEnviar.addEventListener('click', async () => {
             didOpen: () => { Swal.showLoading() }
         });
 
-        // Autenticar de forma invisible con Puter usando un usuario temporal anónimo.
-        // Esto permite que Puter AI funcione sin requerir inicio de sesión del usuario.
-        try {
-            if (typeof puter !== 'undefined' && puter.auth) {
-                await puter.auth.signIn({ attempt_temp_user_creation: true });
-            }
-        } catch (puterAuthErr) {
-            console.warn('Puter auth silenciosa falló, se intentará con Pollinations como fallback:', puterAuthErr);
-        }
-        
         const aiResult = await analyzeReportWithAI(comentario);
 
         if (aiResult.accion === 'eliminar' || aiResult.priority === null) {

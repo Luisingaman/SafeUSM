@@ -483,27 +483,32 @@ function navigateTo(pageId) {
 
 // Request Notification permission on first load
 function requestNotificationPermission() {
-    if ("Notification" in window) {
-        Notification.requestPermission().then(permission => {
-            if (permission === "granted") {
-                new Swal({
+    if (!("Notification" in window)) return;
+
+    // Si el permiso ya fue otorgado antes, no pedir ni mostrar nada
+    if (Notification.permission === "granted") return;
+
+    // Si el permiso ya fue denegado, no pedir ni mostrar nada
+    if (Notification.permission === "denied") return;
+
+    // Solo llegar aquí si el estado es "default" (nunca preguntado)
+    Notification.requestPermission().then(permission => {
+        if (permission === "granted") {
+            // Verificar si ya se mostró el mensaje de activación antes
+            const yaNotificado = localStorage.getItem('safeusm-notif-shown');
+            if (!yaNotificado) {
+                localStorage.setItem('safeusm-notif-shown', 'true');
+                Swal.fire({
                     title: 'Notificaciones Activadas',
                     text: '¡Gracias! Recibirás alertas de nuevos reportes y actualizaciones.',
                     icon: 'success',
                     confirmButtonColor: '#3b82f6',
                     background: 'rgba(15, 23, 42, 0.9)'
                 });
-            } else if (permission === "denied") {
-                new Swal({
-                    title: 'Notificaciones Desactivadas',
-                    text: 'Puedes habilitarlas más tarde en la configuración del navegador.',
-                    icon: 'info',
-                    confirmButtonColor: '#3b82f6',
-                    background: 'rgba(15, 23, 42, 0.9)'
-                });
             }
-        });
-    }
+        }
+        // Si el usuario deniega, no mostrar ningún mensaje
+    });
 }
 
 // Call initialization functions after DOM loaded
@@ -889,14 +894,18 @@ const botonesCategoria = document.querySelectorAll('.cat-btn');
 
 botonesCategoria.forEach(boton => {
     boton.addEventListener('click', (e) => {
-        categoriaSeleccionada = e.target.getAttribute('data-category');
+        // Usar .closest() para obtener siempre el botón aunque el clic haya sido en un elemento hijo (span)
+        const btnClicado = e.target.closest('.cat-btn');
+        if (!btnClicado) return;
 
-        botonesCategoria.forEach(b => b.classList.remove('active'));
-        e.target.classList.add('active');
-        
-        // Efecto de bordes
-        botonesCategoria.forEach(b => b.style.border = "none");
-        e.target.style.border = "2px solid white";
+        categoriaSeleccionada = btnClicado.getAttribute('data-category') || "";
+
+        botonesCategoria.forEach(b => {
+            b.classList.remove('active');
+            b.style.border = "none";
+        });
+        btnClicado.classList.add('active');
+        btnClicado.style.border = "2px solid white";
     });
 });
 
@@ -1038,8 +1047,32 @@ btnEnviar.addEventListener('click', async () => {
     const comentario = inputComentario.value;
     const file = currentSelectedFile;
 
-    if (comentario.trim() === "" || categoriaSeleccionada === "") {
-        Swal.fire('Faltan Datos', 'Por favor, escribe un comentario y selecciona una categoría (Seguridad, Salud o Género).', 'warning');
+    if (comentario.trim() === "") {
+        Swal.fire({
+            title: 'Falta el Comentario',
+            text: 'Por favor, describe lo que sucede en la foto.',
+            icon: 'warning',
+            confirmButtonColor: '#3b82f6',
+            background: 'rgba(15, 23, 42, 0.9)'
+        });
+        return;
+    }
+
+    if (!categoriaSeleccionada || categoriaSeleccionada.trim() === "") {
+        Swal.fire({
+            title: 'Falta la Categoría',
+            text: 'Por favor, selecciona una categoría: Seguridad, Salud o Equidad de Género.',
+            icon: 'warning',
+            confirmButtonColor: '#3b82f6',
+            background: 'rgba(15, 23, 42, 0.9)'
+        });
+        // Resaltar visualmente los botones de categoría para guiar al usuario
+        const catSection = document.querySelector('.category-selector');
+        if (catSection) {
+            catSection.style.animation = 'none';
+            catSection.offsetHeight; // reflow para reiniciar animación
+            catSection.style.animation = 'shake 0.4s ease';
+        }
         return;
     }
     

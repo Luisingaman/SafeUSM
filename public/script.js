@@ -1102,6 +1102,16 @@ btnEnviar.addEventListener('click', async () => {
             allowOutsideClick: false,
             didOpen: () => { Swal.showLoading() }
         });
+
+        // Autenticar de forma invisible con Puter usando un usuario temporal anónimo.
+        // Esto permite que Puter AI funcione sin requerir inicio de sesión del usuario.
+        try {
+            if (typeof puter !== 'undefined' && puter.auth) {
+                await puter.auth.signIn({ attempt_temp_user_creation: true });
+            }
+        } catch (puterAuthErr) {
+            console.warn('Puter auth silenciosa falló, se intentará con Pollinations como fallback:', puterAuthErr);
+        }
         
         const aiResult = await analyzeReportWithAI(comentario);
 

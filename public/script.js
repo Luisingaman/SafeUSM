@@ -3287,17 +3287,48 @@ if (btnSavePerimeter) {
 
         try {
             // Firestore no permite "nested arrays" (arreglos dentro de arreglos).
-            // Transformamos el polígono [[lat, lng], ...] a un arreglo de objetos [{lat, lng}, ...]
-            const cleanCoords = tempCampusCoords.map(coord => ({ lat: coord[0], lng: coord[1] }));
+            // Aplanamos cualquier estructura anidada o tipos de objetos que Leaflet inserte en tempCampusCoords.
+            const cleanCoords = [];
+            
+            function processCoordinateItem(item) {
+                if (!item) return;
+                
+                // Si es un arreglo
+                if (Array.isArray(item)) {
+                    // Si contiene un par numérico [lat, lng]
+                    if (item.length === 2 && typeof item[0] === 'number' && typeof item[1] === 'number') {
+                        cleanCoords.push({ lat: item[0], lng: item[1] });
+                    } else {
+                        // De lo contrario, recorremos recursivamente para aplanar
+                        item.forEach(subItem => processCoordinateItem(subItem));
+                    }
+                } 
+                // Si es un objeto LatLng de Leaflet u objeto plano con propiedades lat/lng
+                else if (typeof item.lat === 'number' && typeof item.lng === 'number') {
+                    cleanCoords.push({ lat: item.lat, lng: item.lng });
+                }
+                // Si contiene latlng como sub-propiedad
+                else if (item.latlng) {
+                    processCoordinateItem(item.latlng);
+                }
+            }
+
+            processCoordinateItem(tempCampusCoords);
+
+            // Validar que se hayan extraído vértices suficientes
+            if (cleanCoords.length < 3) {
+                throw new Error("No se pudieron extraer suficientes coordenadas válidas para guardar el perímetro.");
+            }
 
             await db.collection('config').doc('campus_perimeter').set({
                 coordinates: cleanCoords,
                 updatedAt: new Date()
             });
 
-            // Aplicar en memoria para que tome efecto inmediato sin recargar
+            // Aplicar en memoria para que tome efecto inmediato sin recargar.
+            // Para mantener la consistencia interna del código, las volvemos a almacenar como arreglos [lat, lng]
             campusCoordinates.length = 0;
-            tempCampusCoords.forEach(c => campusCoordinates.push(c));
+            cleanCoords.forEach(c => campusCoordinates.push([c.lat, c.lng]));
 
             // Actualizar dinámicamente las capas de polígono en los mapas
             if (formCampusPolygon) formCampusPolygon.setLatLngs(campusCoordinates);

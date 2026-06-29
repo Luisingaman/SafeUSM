@@ -1355,29 +1355,45 @@ html[data-theme="photophobia"] body {
     display: flex;
 }
 
-/* === PÁGINA DE ACCESIBILIDAD: fondo uniforme y contenido centrado === */
+/* === PÁGINA DE ACCESIBILIDAD: pantalla completa, centrada y adaptable === */
 #page-accessibility {
-    /* Ocupar toda la altura visible menos el padding del body (3rem arriba + 3rem abajo) */
-    min-height: calc(100vh - 6rem);
-    /* Fondo sólido igual al color del body para evitar el efecto de tarjeta flotante */
+    /* Pantalla completa, ignorando el container de max-width */
+    position: fixed;
+    inset: 0;                  /* top:0 right:0 bottom:0 left:0 */
+    width: 100%;
+    height: 100%;
+    /* Mismo fondo del body: fondo uniforme sin tarjeta flotante */
     background: var(--bg-color);
-    /* Centrar el contenido vertical y horizontalmente */
-    justify-content: center;
+    background-image:
+        radial-gradient(at 0% 0%, rgba(59, 130, 246, 0.15) 0px, transparent 50%),
+        radial-gradient(at 100% 0%, rgba(139, 92, 246, 0.15) 0px, transparent 50%),
+        radial-gradient(at 100% 100%, rgba(16, 185, 129, 0.1) 0px, transparent 50%);
+    z-index: 500;
+    /* Centrar contenido vertical y horizontalmente */
+    display: none;             /* sobreescrito a flex por .page-view.active */
+    flex-direction: column;
     align-items: center;
-    /* Compensar los laterales del contenedor para llenar el ancho completo */
-    margin-left: -1rem;
-    margin-right: -1rem;
-    width: calc(100% + 2rem);
+    justify-content: center;
     padding: 1.5rem 1rem;
-    /* Separar el header del contenido */
-    gap: 0;
+    box-sizing: border-box;
+    overflow-y: auto;
 }
 
 #page-accessibility .page-header {
-    /* El header va al tope, el contenido se centra */
-    align-self: stretch;
-    margin-bottom: 1.5rem;
-    flex-shrink: 0;
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    padding: 1.25rem 1.5rem;
+    border-bottom: 1px solid var(--panel-border);
+    background: rgba(15, 23, 42, 0.5);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+}
+
+/* Compensar el espacio del header fijo */
+#page-accessibility > div:not(.page-header) {
+    margin-top: 90px;
 }
 
 /* === DISEÑO DE PÁGINA DE INICIO (HOME) === */

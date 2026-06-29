@@ -3365,6 +3365,25 @@ loadSavedPerimeter();
 
 // --- INICIALIZACIÓN DE LA APP ---
 window.addEventListener('DOMContentLoaded', () => {
-    // Siempre mostrar la pantalla de bienvenida con el logo al cargar
-    navigateTo('page-welcome');
+    const savedEmail = localStorage.getItem('custom-user-email');
+    const savedName  = localStorage.getItem('custom-user-name');
+
+    if (savedEmail) {
+        // Restaurar el botón de login del Home con el nombre del usuario
+        const loginSpan = document.querySelector('#btn-home-login span');
+        if (loginSpan) {
+            loginSpan.textContent = savedName ? savedName.substring(0, 8) : savedEmail.substring(0, 8);
+        }
+
+        // Mostrar el botón de lista de reportes (solo visible para usuarios registrados)
+        const btnGotoListEl = document.getElementById('btn-goto-list');
+        if (btnGotoListEl) btnGotoListEl.style.display = 'flex';
+
+        // Ir directamente al Home saltando la pantalla de bienvenida
+        navigateTo('page-home');
+    } else {
+        // Sin sesión: mostrar pantalla de bienvenida
+        navigateTo('page-welcome');
+    }
 });
+

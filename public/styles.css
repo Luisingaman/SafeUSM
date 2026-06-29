@@ -21,10 +21,7 @@
 }
 
 html {
-    /* Fijar el html al tamaño de la pantalla: evita scroll del documento */
     height: 100%;
-    height: 100dvh;
-    overflow: hidden;
 }
 
 body {
@@ -35,18 +32,11 @@ body {
         radial-gradient(at 100% 0%, rgba(139, 92, 246, 0.15) 0px, transparent 50%),
         radial-gradient(at 100% 100%, rgba(16, 185, 129, 0.1) 0px, transparent 50%);
     color: var(--text-primary);
-    /* Usar dvh (dynamic viewport height) para adaptar a barras de sistema en móviles */
-    height: 100%;
-    height: 100dvh;
-    /* Evitar que el body haga scroll: cada página maneja su propio scroll */
-    overflow: hidden;
+    min-height: 100vh;
     display: flex;
     justify-content: center;
     align-items: flex-start;
     padding: 3rem 1rem;
-    /* Padding extra para respetar el notch/barra de estado en Android/iOS */
-    padding-top: max(3rem, env(safe-area-inset-top, 3rem));
-    padding-bottom: env(safe-area-inset-bottom, 0px);
     overflow-x: hidden;
     position: relative;
 }
@@ -100,12 +90,8 @@ body {
 .container {
     width: 100%;
     max-width: 800px;
-    height: 100%;
     z-index: 1;
     margin: 0 auto;
-    overflow: hidden;
-    display: flex;
-    flex-direction: column;
 }
 
 .glass-panel {
@@ -1360,16 +1346,9 @@ html[data-theme="photophobia"] body {
 .page-view {
     display: none;
     width: 100%;
-    /* Cada página ocupa toda la altura disponible y maneja su propio scroll */
-    flex: 1;
-    overflow-y: auto;
-    overflow-x: hidden;
-    -webkit-overflow-scrolling: touch;
     animation: pageTransitionStatic 0.3s ease forwards;
     flex-direction: column;
     align-items: center;
-    /* Padding interno para el contenido */
-    padding-bottom: 2rem;
 }
 
 .page-view.active {
